@@ -11,15 +11,15 @@ void setup() {
 void loop() {
   if (digitalRead(buttonPin) == HIGH) {
     //Serial.println("Button state is HIGH, starting watering");
-    for (int i=0; i<3; i++) {
+    for (int i=0; i<1; i++) {
       /*Serial.print("Watering cycle ");
       Serial.print(i+1);
       Serial.println();*/
       analogWrite(motorControl, 255);
-      delay(4000);
+      delay(2000);
   
       analogWrite(motorControl, 0);
-      delay(10000);
+      delay(1000);
     }
     Serial.println("Watering finished");
   }
