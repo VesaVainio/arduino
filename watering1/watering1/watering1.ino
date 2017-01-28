@@ -2,6 +2,7 @@
 #include <Wire.h>  // Comes with Arduino IDE
 #include <LiquidCrystal_I2C.h>
 #include <dht.h>
+#include <EEPROM.h>
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 dht DHT;
@@ -16,17 +17,15 @@ dht DHT;
 #define DISP_MODE_6H 3
 #define DISP_MODE_STATS 4
 
-struct minuteSample
-{
-  byte temperature;
-  byte humidity;
-};
+const int seriesCount = 6;
 
-struct hourSample
-{
-  float temperature;
-  float humidity;
-};
+const int seriesInUse = 2;
+
+const int startOfMinuteSamples = 24; // 24 bytes for misc variables
+const int oneMinuteSeriesBytes = 12 * sizeof(float);
+
+const int startOfHourSamples = startOfMinuteSamples + seriesCount * oneMinuteSeriesBytes;
+const int oneHourSeriesBytes = 24 * sizeof(float);
 
 byte mode = MODE_OK;
 
@@ -38,12 +37,6 @@ int currentHumidity = 0;
 unsigned long dhtUpdatedMillis = 0;
 
 unsigned long nextMinuteSampleMillis = 0;
-
-minuteSample minuteSamples[60];
-int minuteSampleIndex = 0;
-
-hourSample hourSamples[24];
-int hourSampleIndex = 0;
 
 void setup()
 {
@@ -62,8 +55,6 @@ void setup()
 
 void loop()
 {
-  Serial.print("Loop ");
-  Serial.println(dispMode);
   updateDht();
   doSampling();
   if (mode == MODE_OK) 
@@ -91,17 +82,17 @@ void updateLcd()
     {
       dispMode = DISP_MODE_1H;
       lcd.setCursor(0,0);
-      lcd.print("1h av tmp " + String(getNHoursAvgTemp(1), 1));
+      lcd.print("1h av tmp " + String(getNHoursAvg(0, 1), 1));
       lcd.setCursor(0,1);
-      lcd.print("1h av hmd " + String(getNHoursAvgHumid(1), 1));
+      lcd.print("1h av hmd " + String(getNHoursAvg(1, 1), 1));
     }
     else if (dispMode == DISP_MODE_1H)
     {
       dispMode = DISP_MODE_6H;
       lcd.setCursor(0,0);
-      lcd.print("6h av tmp " + String(getNHoursAvgTemp(6), 1));
+      lcd.print("6h av tmp " + String(getNHoursAvg(0, 6), 1));
       lcd.setCursor(0,1);
-      lcd.print("6h av hmd " + String(getNHoursAvgHumid(6), 1));
+      lcd.print("6h av hmd " + String(getNHoursAvg(1, 6), 1));
     }
     else if (dispMode == DISP_MODE_6H)
     {
@@ -119,43 +110,48 @@ void updateLcd()
 void doSampling()
 {
   unsigned long currentMillis = millis();
-  if (nextMinuteSampleMillis == 0)
-  {
-    nextMinuteSampleMillis = currentMillis + 60*1000ul;
-    minuteSamples[minuteSampleIndex].temperature = currentTemperature;
-    minuteSamples[minuteSampleIndex].humidity = currentHumidity;
-    minuteSampleIndex++;
-  }
-  else if (currentMillis > nextMinuteSampleMillis)
-  {
-    nextMinuteSampleMillis += 60*1000ul;
-    minuteSamples[minuteSampleIndex].temperature = currentTemperature;
-    minuteSamples[minuteSampleIndex].humidity = currentHumidity;
-    minuteSampleIndex++;
-  }
 
-  if (minuteSampleIndex == 60)
+  if (currentMillis < nextMinuteSampleMillis)
   {
-    float avgTemperature = 0;
-    float avgHumidity = 0;
+    return;
+  }
+  
+  int minuteIndex = getMinuteIndex();
 
-    for (int i=0; i<60; i++) {
-      avgTemperature += minuteSamples[i].temperature;
-      avgHumidity += minuteSamples[i].humidity;
+  nextMinuteSampleMillis += 300000ul;
+  putMinuteSample(0, minuteIndex, (float)currentTemperature);
+  putMinuteSample(1, minuteIndex, (float)currentHumidity);
+  minuteIndex++;
+
+  if (minuteIndex == 12)
+  {
+    minuteIndex = 0;
+    putMinuteIndex(minuteIndex);
+
+    int hourIndex = getHourIndex();
+
+    for (int s = 0; s < seriesInUse; s++) {
+      float avgValue = 0;
+  
+      for (int i = 0; i < 12; i++) {
+        avgValue += getMinuteSample(s, i);
+      }
+  
+      avgValue /= 12;
+
+      putHourSample(s, hourIndex, avgValue);
     }
 
-    avgTemperature /= 60;
-    avgHumidity /= 60;
-
-    hourSamples[hourSampleIndex].temperature = avgTemperature;
-    hourSamples[hourSampleIndex].humidity = avgHumidity;
-    hourSampleIndex++;
-    if (hourSampleIndex == 24)
+    hourIndex++;
+    if (hourIndex == 24)
     {
-      hourSampleIndex = 0;
+      hourIndex = 0;
     }
-    
-    minuteSampleIndex = 0;
+    putHourIndex(hourIndex);
+  }
+  else 
+  {
+    putMinuteIndex(minuteIndex);
   }
 }
 
@@ -188,9 +184,9 @@ void setMode(int newMode)
   mode = newMode;
 }
 
-float getNHoursAvgTemp(int n)
+float getNHoursAvg(int series, int n)
 {
-  int index = hourSampleIndex;
+  int index = getHourIndex();
   float avg = 0;
   for (int i=0; i<n; i++)
   {
@@ -199,28 +195,58 @@ float getNHoursAvgTemp(int n)
     {
       index = 23;
     }
-    avg += hourSamples[index].temperature;
+    avg += getHourSample(series, index);
   }
 
   avg /= n;
   return avg;
 }
 
-float getNHoursAvgHumid(int n)
+void putMinuteSample(int series, int index, float value)
 {
-  int index = hourSampleIndex;
-  float avg = 0.0f;
-  for (int i=0; i<n; i++)
-  {
-    index--;
-    if (index < 0)
-    {
-      index = 23;
-    }
-    avg += hourSamples[index].humidity;
-  }
+  int address = startOfMinuteSamples + series * oneMinuteSeriesBytes + index * sizeof(float);
+  EEPROM.put(address, value);
+}
 
-  avg /= n;
-  return avg;
+float getMinuteSample(int series, int index)
+{
+  int address = startOfMinuteSamples + series * oneMinuteSeriesBytes + index * sizeof(float);
+  float value;
+  EEPROM.get(address, value);  
+  return value;
+}
+
+void putHourSample(int series, int index, float value)
+{
+  int address = startOfHourSamples + series * oneHourSeriesBytes + index * sizeof(float);
+  EEPROM.put(address, value);
+}
+
+float getHourSample(int series, int index)
+{
+  int address = startOfHourSamples + series * oneHourSeriesBytes + index * sizeof(float);
+  float value;
+  EEPROM.get(address, value);  
+  return value;
+}
+
+void putMinuteIndex(int index) {
+  EEPROM.put(0, index);
+}
+
+int getMinuteIndex() {
+  int index;
+  EEPROM.get(0, index);
+  return index;
+}
+
+void putHourIndex(int index) {
+  EEPROM.put(2, index);
+}
+
+int getHourIndex() {
+  int index;
+  EEPROM.get(2, index);
+  return index;
 }
 
