@@ -19,7 +19,7 @@ dht DHT;
 
 const int seriesCount = 6;
 
-const int seriesInUse = 2;
+const int seriesInUse = 3;
 
 const int startOfMinuteSamples = 24; // 24 bytes for misc variables
 const int oneMinuteSeriesBytes = 12 * sizeof(float);
@@ -34,6 +34,7 @@ unsigned long lcdUpdatedMillis = 0;
 
 int currentTemperature = 0;
 int currentHumidity = 0;
+int currentSoil = 0;
 unsigned long dhtUpdatedMillis = 0;
 
 unsigned long nextMinuteSampleMillis = 0;
@@ -56,13 +57,16 @@ void setup()
 void loop()
 {
   updateDht();
-  doSampling();
+
+  currentSoil = analogRead(0);
+  
   if (mode == MODE_OK) 
   {
+      doSampling();
       updateLcd();
   }
 
-  delay(200);
+  delay(500);
 }
 
 void updateLcd()
@@ -70,35 +74,33 @@ void updateLcd()
   unsigned long currentMillis = millis();
   if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 2000)
   {
+    lcd.clear();
+    lcd.setCursor(0,0);
+
     if (dispMode == DISP_MODE_STATS)
     {
       dispMode = DISP_MODE_CURRENT;
-      lcd.setCursor(0,0);
-      lcd.print("Curr  tmp " + String(currentTemperature) + "  ");
+      lcd.print("tmp  " + String(currentTemperature) + " hmd " + String(currentHumidity));
       lcd.setCursor(0,1);
-      lcd.print("Curr  hmd " + String(currentHumidity) + "  ");
+      lcd.print("soil " + String(currentSoil));
     } 
     else if (dispMode == DISP_MODE_CURRENT)
     {
       dispMode = DISP_MODE_1H;
-      lcd.setCursor(0,0);
-      lcd.print("1h av tmp " + String(getNHoursAvg(0, 1), 1));
+      lcd.print("1h " + String(getNHoursAvg(0, 1), 1) + " " + String(getNHoursAvg(1, 1), 1));
       lcd.setCursor(0,1);
-      lcd.print("1h av hmd " + String(getNHoursAvg(1, 1), 1));
+      lcd.print("   " + String(getNHoursAvg(2, 1), 1) + "  ");
     }
     else if (dispMode == DISP_MODE_1H)
     {
       dispMode = DISP_MODE_6H;
-      lcd.setCursor(0,0);
-      lcd.print("6h av tmp " + String(getNHoursAvg(0, 6), 1));
+      lcd.print("6h " + String(getNHoursAvg(0, 6), 1) + " " + String(getNHoursAvg(1, 6), 1));
       lcd.setCursor(0,1);
-      lcd.print("6h av hmd " + String(getNHoursAvg(1, 6), 1));
+      lcd.print("   " + String(getNHoursAvg(2, 6), 1));
     }
     else if (dispMode == DISP_MODE_6H)
     {
       dispMode = DISP_MODE_STATS;
-      lcd.clear();
-      lcd.setCursor(0,0);
       lcd.print("run " + String(currentMillis/(1000*60ul*60ul)) + "h " + String((currentMillis % (1000*60ul*60ul)) / (1000*60ul)) + "min");
       lcd.setCursor(0,1);
       lcd.print(String(currentMillis));
@@ -121,6 +123,7 @@ void doSampling()
   nextMinuteSampleMillis += 300000ul;
   putMinuteSample(0, minuteIndex, (float)currentTemperature);
   putMinuteSample(1, minuteIndex, (float)currentHumidity);
+  putMinuteSample(2, minuteIndex, (float)currentSoil);
   minuteIndex++;
 
   if (minuteIndex == 12)
