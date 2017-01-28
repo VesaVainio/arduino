@@ -11,10 +11,15 @@ dht DHT;
 #define MODE_OK 1
 #define MODE_ERROR -1
 
+#define DISP_MODE_CURRENT 1
+#define DISP_MODE_1H 2
+#define DISP_MODE_6H 3
+#define DISP_MODE_STATS 4
+
 struct minuteSample
 {
-  int temperature;
-  int humidity;
+  byte temperature;
+  byte humidity;
 };
 
 struct hourSample
@@ -23,7 +28,10 @@ struct hourSample
   float humidity;
 };
 
-int mode = MODE_OK;
+byte mode = MODE_OK;
+
+byte dispMode = DISP_MODE_STATS;
+unsigned long lcdUpdatedMillis = 0;
 
 int currentTemperature = 0;
 int currentHumidity = 0;
@@ -54,17 +62,58 @@ void setup()
 
 void loop()
 {
+  Serial.print("Loop ");
+  Serial.println(dispMode);
   updateDht();
+  doSampling();
   if (mode == MODE_OK) 
   {
-      lcd.setCursor(0,0);
-      lcd.print("t:" + String(currentTemperature) + " t1:" + String(hourSamples[hourSampleIndex].temperature, 1));
-      
-      lcd.setCursor(0,1);
-      lcd.print("h:" + String(currentHumidity) + " t1:" + String(hourSamples[hourSampleIndex].humidity, 1));
+      updateLcd();
   }
 
   delay(200);
+}
+
+void updateLcd()
+{
+  unsigned long currentMillis = millis();
+  if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 2000)
+  {
+    if (dispMode == DISP_MODE_STATS)
+    {
+      dispMode = DISP_MODE_CURRENT;
+      lcd.setCursor(0,0);
+      lcd.print("Curr  tmp " + String(currentTemperature) + "  ");
+      lcd.setCursor(0,1);
+      lcd.print("Curr  hmd " + String(currentHumidity) + "  ");
+    } 
+    else if (dispMode == DISP_MODE_CURRENT)
+    {
+      dispMode = DISP_MODE_1H;
+      lcd.setCursor(0,0);
+      lcd.print("1h av tmp " + String(getNHoursAvgTemp(1), 1));
+      lcd.setCursor(0,1);
+      lcd.print("1h av hmd " + String(getNHoursAvgHumid(1), 1));
+    }
+    else if (dispMode == DISP_MODE_1H)
+    {
+      dispMode = DISP_MODE_6H;
+      lcd.setCursor(0,0);
+      lcd.print("6h av tmp " + String(getNHoursAvgTemp(6), 1));
+      lcd.setCursor(0,1);
+      lcd.print("6h av hmd " + String(getNHoursAvgHumid(6), 1));
+    }
+    else if (dispMode == DISP_MODE_6H)
+    {
+      dispMode = DISP_MODE_STATS;
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("run " + String(currentMillis/(1000*60ul*60ul)) + "h " + String((currentMillis % (1000*60ul*60ul)) / (1000*60ul)) + "min");
+      lcd.setCursor(0,1);
+      lcd.print(String(currentMillis));
+    }
+    lcdUpdatedMillis = currentMillis;
+  }
 }
 
 void doSampling()
@@ -137,5 +186,41 @@ void setMode(int newMode)
     lcd.clear();
   }
   mode = newMode;
+}
+
+float getNHoursAvgTemp(int n)
+{
+  int index = hourSampleIndex;
+  float avg = 0;
+  for (int i=0; i<n; i++)
+  {
+    index--;
+    if (index < 0)
+    {
+      index = 23;
+    }
+    avg += hourSamples[index].temperature;
+  }
+
+  avg /= n;
+  return avg;
+}
+
+float getNHoursAvgHumid(int n)
+{
+  int index = hourSampleIndex;
+  float avg = 0.0f;
+  for (int i=0; i<n; i++)
+  {
+    index--;
+    if (index < 0)
+    {
+      index = 23;
+    }
+    avg += hourSamples[index].humidity;
+  }
+
+  avg /= n;
+  return avg;
 }
 
