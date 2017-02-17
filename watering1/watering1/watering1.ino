@@ -9,6 +9,8 @@ dht DHT;
 
 #define DHT11_PIN 2
 
+#define MOISTURE_VCC_PIN 4
+
 #define MODE_OK 1
 #define MODE_ERROR -1
 
@@ -39,6 +41,9 @@ unsigned long dhtUpdatedMillis = 0;
 
 unsigned long nextMinuteSampleMillis = 0;
 
+unsigned long moistureUpdatedMillis = 0;
+bool moistureReadingInProgress = false;
+
 void setup()
 {
   Serial.begin(9600);
@@ -52,13 +57,14 @@ void setup()
     lcd.backlight();
     delay(250);
   }
+
+  pinMode(MOISTURE_VCC_PIN, OUTPUT);
 }
 
 void loop()
 {
   updateDht();
-
-  currentSoil = analogRead(0);
+  updateMoisture();
   
   if (mode == MODE_OK) 
   {
@@ -66,7 +72,26 @@ void loop()
       updateLcd();
   }
 
-  delay(500);
+  delay(20);
+}
+
+void updateMoisture()
+{
+  unsigned long currentMillis = millis();
+  if (moistureReadingInProgress == false && currentMillis > moistureUpdatedMillis + 30000)
+  {
+    moistureReadingInProgress = true;
+    digitalWrite(MOISTURE_VCC_PIN, HIGH);
+    moistureUpdatedMillis = currentMillis;
+  }
+  else if (moistureReadingInProgress == true && currentMillis > moistureUpdatedMillis + 50)
+  {
+    currentSoil = analogRead(0); // actually get the reading
+
+    moistureReadingInProgress = false;
+    digitalWrite(MOISTURE_VCC_PIN, LOW);
+    moistureUpdatedMillis = currentMillis;
+  }
 }
 
 void updateLcd()
