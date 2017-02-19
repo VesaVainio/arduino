@@ -9,15 +9,23 @@ dht DHT;
 
 #define DHT11_PIN 2
 
-#define MOISTURE_VCC_PIN 4
+#define MOISTURE_PIN1 4
+#define MOISTURE_PIN2 5
 
-#define MODE_OK 1
-#define MODE_ERROR -1
+#define BUTTON1_PIN 13
+#define BUTTON2_PIN 12
+
+#define DHT_MODE_OK 1
+#define DHT_MODE_ERROR -1
 
 #define DISP_MODE_CURRENT 1
 #define DISP_MODE_1H 2
 #define DISP_MODE_6H 3
 #define DISP_MODE_STATS 4
+
+#define MODE_1_DISP_CYCLE 1
+#define MODE_2_DISP_MENU 2
+#define MODE_3_DISP_HISTORY 3
 
 const int seriesCount = 6;
 
@@ -29,7 +37,7 @@ const int oneMinuteSeriesBytes = 12 * sizeof(float);
 const int startOfHourSamples = startOfMinuteSamples + seriesCount * oneMinuteSeriesBytes;
 const int oneHourSeriesBytes = 24 * sizeof(float);
 
-byte mode = MODE_OK;
+byte dhtMode = DHT_MODE_OK;
 
 byte dispMode = DISP_MODE_STATS;
 unsigned long lcdUpdatedMillis = 0;
@@ -42,7 +50,14 @@ unsigned long dhtUpdatedMillis = 0;
 unsigned long nextMinuteSampleMillis = 0;
 
 unsigned long moistureUpdatedMillis = 0;
-bool moistureReadingInProgress = false;
+byte moistureReadingState = 0;
+
+unsigned long buttonUpdatedMillis = 0;
+int button1State = 0;
+int button2State = 0;
+bool buttonStateChanging = false;
+
+int mode = MODE_1_DISP_CYCLE;
 
 void setup()
 {
@@ -50,51 +65,124 @@ void setup()
 
   lcd.begin(16,2);
 
+  pinMode(MOISTURE_PIN1, OUTPUT);
+  pinMode(MOISTURE_PIN2, OUTPUT);
+
+  pinMode(BUTTON1_PIN, INPUT);
+  pinMode(BUTTON2_PIN, INPUT);
+  
   for(int i = 0; i< 3; i++)
   {
+    digitalWrite(MOISTURE_PIN1, HIGH);
+    digitalWrite(MOISTURE_PIN2, LOW);
     lcd.noBacklight();
     delay(250);
+
+    currentSoil = analogRead(0); // get the moisture reading
+    
+    digitalWrite(MOISTURE_PIN1, LOW);
+    digitalWrite(MOISTURE_PIN2, HIGH);
     lcd.backlight();
     delay(250);
   }
 
-  pinMode(MOISTURE_VCC_PIN, OUTPUT);
+  digitalWrite(MOISTURE_PIN1, LOW);
+  digitalWrite(MOISTURE_PIN2, LOW);
 }
 
 void loop()
 {
   updateDht();
   updateMoisture();
+  updateButtonsWithDebounce();
   
-  if (mode == MODE_OK) 
+  if (dhtMode == DHT_MODE_OK) 
   {
       doSampling();
       updateLcd();
   }
 
-  delay(20);
+  delay(5);
+}
+
+void updateButtonsWithDebounce()
+{
+  int button1NewState = digitalRead(BUTTON1_PIN);
+  int button2NewState = digitalRead(BUTTON2_PIN);
+
+  unsigned long currentMillis = millis();
+  if (buttonStateChanging == false && (button1NewState != button1State || button2NewState != button2State))
+  {
+    buttonUpdatedMillis == currentMillis;
+    buttonStateChanging = true;
+  }
+  else if (buttonStateChanging = true && currentMillis > buttonUpdatedMillis + 50)
+  {
+    if (button1State == LOW && button1NewState == HIGH)
+    {
+      button1Pressed();
+    }
+
+    if (button2State == LOW && button2NewState == HIGH)
+    {
+      button2Pressed();
+    }
+
+    button1State = button1NewState;
+    button2State = button2NewState;
+    buttonStateChanging = false;
+  }
+}
+
+void button1Pressed()
+{
+  Serial.println("Button 1 pressed");
+}
+
+void button2Pressed()
+{
+  Serial.println("Button 2 pressed");
 }
 
 void updateMoisture()
 {
   unsigned long currentMillis = millis();
-  if (moistureReadingInProgress == false && currentMillis > moistureUpdatedMillis + 30000)
+  if (moistureReadingState == 0 && currentMillis > moistureUpdatedMillis + 30000)
   {
-    moistureReadingInProgress = true;
-    digitalWrite(MOISTURE_VCC_PIN, HIGH);
+    moistureReadingState = 1;
+    digitalWrite(MOISTURE_PIN1, HIGH);
+    digitalWrite(MOISTURE_PIN2, LOW);
     moistureUpdatedMillis = currentMillis;
   }
-  else if (moistureReadingInProgress == true && currentMillis > moistureUpdatedMillis + 50)
+  else if (moistureReadingState == 1 && currentMillis > moistureUpdatedMillis + 200)
   {
     currentSoil = analogRead(0); // actually get the reading
 
-    moistureReadingInProgress = false;
-    digitalWrite(MOISTURE_VCC_PIN, LOW);
+    moistureReadingState = 2;
+    digitalWrite(MOISTURE_PIN1, LOW);
+    digitalWrite(MOISTURE_PIN2, HIGH);
+    moistureUpdatedMillis = currentMillis;
+  }
+  else if (moistureReadingState == 2 && currentMillis > moistureUpdatedMillis + 200)
+  {
+    moistureReadingState = 0;
+    digitalWrite(MOISTURE_PIN1, LOW);
+    digitalWrite(MOISTURE_PIN2, LOW);
     moistureUpdatedMillis = currentMillis;
   }
 }
 
 void updateLcd()
+{
+#define MODE_2_DISP_MENU;
+#define MODE_3_DISP_HISTORY;
+  if (mode == MODE_1_DISP_CYCLE)
+  {
+    updateLcdWithDisplayCycle();
+  }
+}
+
+void updateLcdWithDisplayCycle()
 {
   unsigned long currentMillis = millis();
   if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 2000)
@@ -190,7 +278,7 @@ void updateDht()
   {
     int chk = DHT.read11(DHT11_PIN);
     if (chk < 0) {
-      setMode(MODE_ERROR);
+      setMode(DHT_MODE_ERROR);
       lcd.setCursor(0,0);
       lcd.print("DHT11 ERROR ");
       lcd.print(chk);
@@ -198,7 +286,7 @@ void updateDht()
     else {
       currentTemperature = DHT.temperature;
       currentHumidity = DHT.humidity;
-      setMode(MODE_OK);
+      setMode(DHT_MODE_OK);
     }
     dhtUpdatedMillis = currentMillis;
   }
@@ -206,10 +294,10 @@ void updateDht()
 
 void setMode(int newMode)
 {
-  if (newMode != mode) {
+  if (newMode != dhtMode) {
     lcd.clear();
   }
-  mode = newMode;
+  dhtMode = newMode;
 }
 
 float getNHoursAvg(int series, int n)
