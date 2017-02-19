@@ -23,6 +23,9 @@ dht DHT;
 #define DISP_MODE_6H 3
 #define DISP_MODE_STATS 4
 
+#define MENU_MODE_SHOW_HISTORY 1
+#define MENU_MODE_EXIT 99
+
 #define MODE_1_DISP_CYCLE 1
 #define MODE_2_DISP_MENU 2
 #define MODE_3_DISP_HISTORY 3
@@ -58,6 +61,9 @@ int button2State = 0;
 bool buttonStateChanging = false;
 
 int mode = MODE_1_DISP_CYCLE;
+
+int menuMode = MENU_MODE_SHOW_HISTORY;
+
 
 void setup()
 {
@@ -136,12 +142,72 @@ void updateButtonsWithDebounce()
 
 void button1Pressed()
 {
-  Serial.println("Button 1 pressed");
+  if (mode == MODE_1_DISP_CYCLE)
+  {
+    mode = MODE_2_DISP_MENU;
+    menuMode = MENU_MODE_SHOW_HISTORY;
+    renderMenu();
+  }
+  else if (mode == MODE_2_DISP_MENU)
+  {
+    menuNext();
+    renderMenu();
+  }
+  else if (mode == MODE_3_DISP_HISTORY)
+  {
+    mode = MODE_1_DISP_CYCLE;
+    lcdUpdatedMillis = 0;
+    dispMode = DISP_MODE_STATS;
+  }
 }
 
 void button2Pressed()
 {
-  Serial.println("Button 2 pressed");
+  menuChoose();
+}
+
+void renderMenu()
+{
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("MENU");
+  lcd.setCursor(0,1);
+  if (menuMode == MENU_MODE_SHOW_HISTORY)
+  {
+    lcd.print("    SHOW HISTORY");
+  }
+  else if (menuMode == MENU_MODE_EXIT)
+  {
+    lcd.print("    EXIT");
+  }
+}
+
+void menuNext()
+{
+  if (menuMode == MENU_MODE_SHOW_HISTORY)
+  {
+    menuMode = MENU_MODE_EXIT;
+  }
+  else if (menuMode == MENU_MODE_EXIT)
+  {
+    menuMode = MENU_MODE_SHOW_HISTORY;
+  }
+}
+
+void menuChoose()
+{
+  if (menuMode == MENU_MODE_EXIT)
+  {
+    mode = MODE_1_DISP_CYCLE;
+    lcdUpdatedMillis = 0;
+    dispMode = DISP_MODE_STATS;
+  }
+  else if (menuMode == MENU_MODE_SHOW_HISTORY)
+  {
+    mode = MODE_3_DISP_HISTORY;
+    lcdUpdatedMillis = 0;
+    dispMode = 0;
+  }
 }
 
 void updateMoisture()
@@ -174,11 +240,65 @@ void updateMoisture()
 
 void updateLcd()
 {
-#define MODE_2_DISP_MENU;
-#define MODE_3_DISP_HISTORY;
   if (mode == MODE_1_DISP_CYCLE)
   {
     updateLcdWithDisplayCycle();
+  }
+  else if (mode == MODE_3_DISP_HISTORY)
+  {
+    updateLcdWithHistory();
+  }
+}
+
+void updateLcdWithHistory()
+{
+  unsigned long currentMillis = millis();
+  if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 400)
+  {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    if (dispMode <= 11)
+    {
+      int minuteIndex = getMinuteIndex() - 1 - dispMode;
+      if (minuteIndex < 0)
+      {
+        minuteIndex += 12;
+      }
+
+      int minutes = (dispMode + 1) * 5;
+      if (minutes < 10)
+      {
+        lcd.print(" ");
+      }
+      
+      lcd.print(String(minutes) + "m " + String(getMinuteSample(0, minuteIndex), 1) + " " + String(getMinuteSample(1, minuteIndex), 1));
+      lcd.setCursor(0,1);
+      lcd.print("    " + String(getMinuteSample(2, minuteIndex), 1));
+    }
+    else {
+      int hourIndex = getHourIndex() - 1 - (dispMode - 12);
+      if (hourIndex < 0)
+      {
+        hourIndex += 24;  
+      }
+
+      int hours = (dispMode - 11);
+      if (hours < 10)
+      {
+        lcd.print(" ");
+      }
+
+      lcd.print(String(hours) + "h " + String(getHourSample(0, hourIndex), 1) + " " + String(getHourSample(1, hourIndex), 1));
+      lcd.setCursor(0,1);
+      lcd.print("    " + String(getHourSample(2, hourIndex), 1));
+    }
+    
+    dispMode += 1;
+    if (dispMode > 35)
+    {
+      dispMode = 0;
+    }
+    lcdUpdatedMillis = currentMillis;
   }
 }
 
