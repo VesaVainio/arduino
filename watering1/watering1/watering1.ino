@@ -18,13 +18,6 @@ dht DHT;
 #define DHT_MODE_OK 1
 #define DHT_MODE_ERROR -1
 
-#define MENU_MODE_SHOW_HISTORY 1
-#define MENU_MODE_EXIT 99
-
-#define MODE_1_DISP_CYCLE 1
-#define MODE_2_DISP_MENU 2
-#define MODE_3_DISP_HISTORY 3
-
 const int seriesCount = 6;
 
 const int seriesInUse = 3;
@@ -37,8 +30,6 @@ const int oneHourSeriesBytes = 24 * sizeof(float);
 
 byte dhtMode = DHT_MODE_OK;
 
-byte dispMode = 0;
-unsigned long lcdUpdatedMillis = 0;
 
 int currentTemperature = 0;
 int currentHumidity = 0;
@@ -51,10 +42,9 @@ unsigned long moistureUpdatedMillis = 0;
 byte moistureReadingState = 0;
 
 unsigned long buttonUpdatedMillis = 0;
-int button1State = 0;
-int button2State = 0;
+int button1State = LOW;
+int button2State = LOW;
 bool buttonStateChanging = false;
-
 
 void updateMoisture()
 {
@@ -241,9 +231,12 @@ class InfoRoller;
 
 class MainMenu : public DisplayHandler {
   private:
-    char *menuItems[2] = { "SHOW HISTORY", "EXIT" };
+    char* menuItems[2] = { "SHOW HISTORY", "EXIT" };
     int itemIndex = 0;
 
+    DisplayHandler* _InfoRollerLocal = 0;
+    DisplayHandler* _HistoryRollerLocal = 0;    
+    
     void printMenuOnLcd() {
       lcd.clear();
       lcd.setCursor(0,0);
@@ -253,11 +246,9 @@ class MainMenu : public DisplayHandler {
     };
       
   public:
-    DisplayHandler *_InfoRoller;
-    DisplayHandler *_HistoryRoller;    
-    
     virtual DisplayHandler* button1Pressed() { 
-      itemIndex = itemIndex++ % 2;
+      itemIndex = ++itemIndex % 2;
+      Serial.println("MainMenu itemIndex " + String(itemIndex));
       printMenuOnLcd();
       return this;
     };
@@ -265,9 +256,9 @@ class MainMenu : public DisplayHandler {
     virtual DisplayHandler* button2Pressed() { 
       switch (itemIndex) {
         case 0:
-          return this;
+          return _HistoryRollerLocal;
         case 1:
-          return _HistoryRoller;
+          return _InfoRollerLocal;
       }
     };
 
@@ -278,14 +269,14 @@ class MainMenu : public DisplayHandler {
     virtual void updateLcd() { };
 
     void Init(DisplayHandler* infoRoller, DisplayHandler* historyRoller) {
-      _InfoRoller = infoRoller;
-      _HistoryRoller = historyRoller;
+      _InfoRollerLocal = infoRoller;
+      _HistoryRollerLocal = historyRoller;
     }
 };
 
 class InfoRoller : public DisplayHandler {
   private:
-    MainMenu *_MainMenu;
+    MainMenu* _MainMenu;
 
     enum Mode {
       Current,
@@ -308,8 +299,6 @@ class InfoRoller : public DisplayHandler {
       return _MainMenu;
     }
     
-    virtual DisplayHandler* button2Pressed() { }
-
     virtual void activate() {
       lcdUpdatedMillis = 0;
     };
@@ -357,7 +346,8 @@ class InfoRoller : public DisplayHandler {
 
 class HistoryRoller : public DisplayHandler {
   private:
-    MainMenu *_MainMenuLocal;
+    MainMenu* _MainMenuLocal;
+    byte dispMode;
     unsigned long lcdUpdatedMillis;
   public:
     HistoryRoller(MainMenu* mainMenu) {
@@ -368,6 +358,7 @@ class HistoryRoller : public DisplayHandler {
     virtual DisplayHandler* button2Pressed() { return this; }
 
     virtual void activate() {
+      dispMode = 0;
       lcdUpdatedMillis = 0;
     };
 
@@ -423,16 +414,17 @@ class HistoryRoller : public DisplayHandler {
     };
 };
 
-MainMenu *_MainMenu = new MainMenu();
-InfoRoller *_InfoRoller = new InfoRoller(_MainMenu);
-HistoryRoller *_HistoryRoller = new HistoryRoller(_MainMenu);
+MainMenu* _MainMenu = new MainMenu();
+InfoRoller* _InfoRoller = new InfoRoller(_MainMenu);
+HistoryRoller* _HistoryRoller = new HistoryRoller(_MainMenu);
 
-DisplayHandler *currentHandler;
+DisplayHandler* currentHandler;
 
 void setup()
 {
   Serial.begin(9600);
-
+  Serial.println("Starting setup");
+  
   lcd.begin(16,2);
 
   pinMode(MOISTURE_PIN1, OUTPUT);
@@ -461,6 +453,8 @@ void setup()
 
   _MainMenu->Init(_InfoRoller, _HistoryRoller);
   currentHandler = _InfoRoller;
+
+  Serial.println("setup finished");
 }
 
 void updateButtonsWithDebounce()
@@ -473,23 +467,30 @@ void updateButtonsWithDebounce()
   {
     buttonUpdatedMillis == currentMillis;
     buttonStateChanging = true;
+    Serial.println("Button state changing");
   }
-  else if (buttonStateChanging = true && currentMillis > buttonUpdatedMillis + 50)
+  else if (buttonStateChanging == true && currentMillis > buttonUpdatedMillis + 50)
   {
+    
     DisplayHandler* oldCurrentHandler = currentHandler;
     DisplayHandler* newCurrentHandler;
+    bool buttonPressed = false;
 
     if (button1State == LOW && button1NewState == HIGH)
     {
+      Serial.println("Button 1 pressed");
       newCurrentHandler = currentHandler->button1Pressed();
+      buttonPressed = true;
     }
 
     if (button2State == LOW && button2NewState == HIGH)
     {
+      Serial.println("Button 2 pressed");
       newCurrentHandler = currentHandler->button2Pressed();
+      buttonPressed = true;
     }
 
-    if (oldCurrentHandler != newCurrentHandler) {
+    if (buttonPressed == true && oldCurrentHandler != newCurrentHandler) {
       currentHandler = newCurrentHandler;
       currentHandler->activate();
     }
@@ -512,6 +513,6 @@ void loop()
       currentHandler->updateLcd();
   }
 
-  delay(5);
+  delay(10);
 }
 
