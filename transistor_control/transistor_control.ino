@@ -1,4 +1,4 @@
-int buttonPin = 2;
+int buttonPin = 13;
 int motorControl = 11;
 
 void setup() {

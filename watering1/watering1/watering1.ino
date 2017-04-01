@@ -30,6 +30,14 @@ const int oneHourSeriesBytes = 24 * sizeof(float);
 
 byte dhtMode = DHT_MODE_OK;
 
+enum BacklightMode {
+  Off = 0,
+  Auto = 1,
+  On = 2
+};
+
+BacklightMode backlightMode = On;
+bool backlightOn = true;
 
 int currentTemperature = 0;
 int currentHumidity = 0;
@@ -228,14 +236,16 @@ class DisplayHandler {
 
 class HistoryRoller;
 class InfoRoller;
+class Settings;
 
 class MainMenu : public DisplayHandler {
   private:
-    char* menuItems[2] = { "SHOW HISTORY", "EXIT" };
+    char* menuItems[3] = { "SHOW HISTORY", "SETTINGS", "EXIT" };
     int itemIndex = 0;
 
     DisplayHandler* _InfoRollerLocal = 0;
-    DisplayHandler* _HistoryRollerLocal = 0;    
+    DisplayHandler* _HistoryRollerLocal = 0;
+    DisplayHandler* _SettingsLocal = 0;
     
     void printMenuOnLcd() {
       lcd.clear();
@@ -247,8 +257,7 @@ class MainMenu : public DisplayHandler {
       
   public:
     virtual DisplayHandler* button1Pressed() { 
-      itemIndex = ++itemIndex % 2;
-      Serial.println("MainMenu itemIndex " + String(itemIndex));
+      itemIndex = ++itemIndex % 3;
       printMenuOnLcd();
       return this;
     };
@@ -258,6 +267,8 @@ class MainMenu : public DisplayHandler {
         case 0:
           return _HistoryRollerLocal;
         case 1:
+          return _SettingsLocal;
+        case 2:
           return _InfoRollerLocal;
       }
     };
@@ -268,9 +279,10 @@ class MainMenu : public DisplayHandler {
     
     virtual void updateLcd() { };
 
-    void Init(DisplayHandler* infoRoller, DisplayHandler* historyRoller) {
+    void Init(DisplayHandler* infoRoller, DisplayHandler* historyRoller, DisplayHandler* settings) {
       _InfoRollerLocal = infoRoller;
       _HistoryRollerLocal = historyRoller;
+      _SettingsLocal = settings;
     }
 };
 
@@ -414,9 +426,70 @@ class HistoryRoller : public DisplayHandler {
     };
 };
 
+class Settings : public DisplayHandler {
+  private:
+    char* menuItems[3] = { "BACKLIGHT", "SOIL LIMIT", "EXIT" };
+    char* backlightOptions[3] = { "OFF", "AUTO", "ON" };
+    int itemIndex = 0;
+
+    DisplayHandler* _MainMenuLocal = 0;
+    
+    void printMenuOnLcd() {
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("SET");
+      lcd.setCursor(0,1);
+      lcd.print(menuItems[itemIndex]);
+      lcd.print(' ');
+      switch (itemIndex) {
+        case 0:
+          lcd.print(backlightOptions[backlightMode]);
+      }
+    };    
+    
+  public:
+    Settings(MainMenu* mainMenu) {
+      _MainMenuLocal = mainMenu;
+    }
+    
+    virtual DisplayHandler* button1Pressed() { 
+      itemIndex = ++itemIndex % 3;
+      printMenuOnLcd();
+      return this; 
+    }
+    
+    virtual DisplayHandler* button2Pressed() { 
+      switch (itemIndex) {
+        case 0:
+          backlightMode = (((int)backlightMode) + 1) % 3;
+          printMenuOnLcd();
+          break;
+        case 1:
+          break;
+        case 2:
+          return _MainMenuLocal;
+      }
+      return this; 
+    }
+    
+    virtual void activate() {
+      printMenuOnLcd();  
+    };
+    virtual void updateLcd() {};
+};
+
+class Test : DisplayHandler {
+    public:
+    virtual DisplayHandler* button1Pressed() { return this; }
+    virtual DisplayHandler* button2Pressed() { return this; }
+    virtual void activate() {};
+    virtual void updateLcd() {};
+};
+
 MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(_MainMenu);
 HistoryRoller* _HistoryRoller = new HistoryRoller(_MainMenu);
+Settings* _Settings = new Settings(_MainMenu);
 
 DisplayHandler* currentHandler;
 
@@ -451,7 +524,7 @@ void setup()
   digitalWrite(MOISTURE_PIN1, LOW);
   digitalWrite(MOISTURE_PIN2, LOW);
 
-  _MainMenu->Init(_InfoRoller, _HistoryRoller);
+  _MainMenu->Init(_InfoRoller, _HistoryRoller, _Settings);
   currentHandler = _InfoRoller;
 
   Serial.println("setup finished");
@@ -465,13 +538,11 @@ void updateButtonsWithDebounce()
   unsigned long currentMillis = millis();
   if (buttonStateChanging == false && (button1NewState != button1State || button2NewState != button2State))
   {
-    buttonUpdatedMillis == currentMillis;
+    buttonUpdatedMillis = currentMillis;
     buttonStateChanging = true;
-    Serial.println("Button state changing");
   }
   else if (buttonStateChanging == true && currentMillis > buttonUpdatedMillis + 50)
   {
-    
     DisplayHandler* oldCurrentHandler = currentHandler;
     DisplayHandler* newCurrentHandler;
     bool buttonPressed = false;
@@ -501,11 +572,31 @@ void updateButtonsWithDebounce()
   }
 }
 
+void updateBacklight() {
+  if (backlightMode == On && backlightOn == false) {
+    lcd.backlight();
+    backlightOn = true;
+  } else if (backlightMode == Off && backlightOn == true) {
+    lcd.noBacklight();
+    backlightOn = false;
+  } else if (backlightMode == Auto) {
+    unsigned long currentMillis = millis();
+    if (currentMillis < buttonUpdatedMillis + 30000 && backlightOn == false) {
+      lcd.backlight();
+      backlightOn = true;
+    } else if (currentMillis > buttonUpdatedMillis + 30000 && backlightOn == true) {
+      lcd.noBacklight();
+      backlightOn = false;
+    }
+  }
+}
+
 void loop()
 {
   updateDht();
   updateMoisture();
   updateButtonsWithDebounce();
+  updateBacklight();
   
   if (dhtMode == DHT_MODE_OK) 
   {
