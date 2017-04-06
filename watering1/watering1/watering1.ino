@@ -1,5 +1,3 @@
-
-#include <Wire.h>  // Comes with Arduino IDE
 #include <LiquidCrystal_I2C.h>
 #include <dht.h>
 #include <EEPROM.h>
@@ -14,6 +12,8 @@ dht DHT;
 
 #define BUTTON1_PIN 13
 #define BUTTON2_PIN 12
+
+#define PUMP1_PIN 11
 
 #define DHT_MODE_OK 1
 #define DHT_MODE_ERROR -1
@@ -39,6 +39,8 @@ enum BacklightMode {
 BacklightMode backlightMode = On;
 bool backlightOn = true;
 
+int pump1Power = 100;
+
 int currentTemperature = 0;
 int currentHumidity = 0;
 int currentSoil = 0;
@@ -57,7 +59,7 @@ bool buttonStateChanging = false;
 void updateMoisture()
 {
   unsigned long currentMillis = millis();
-  if (moistureReadingState == 0 && currentMillis > moistureUpdatedMillis + 30000)
+  if (moistureReadingState == 0 && currentMillis > moistureUpdatedMillis + 15000)
   {
     moistureReadingState = 1;
     digitalWrite(MOISTURE_PIN1, HIGH);
@@ -240,12 +242,13 @@ class Settings;
 
 class MainMenu : public DisplayHandler {
   private:
-    char* menuItems[3] = { "SHOW HISTORY", "SETTINGS", "EXIT" };
+    char const* menuItems[4] = { "SHOW HISTORY", "SETTINGS", "TEST", "EXIT" };
     int itemIndex = 0;
 
     DisplayHandler* _InfoRollerLocal = 0;
     DisplayHandler* _HistoryRollerLocal = 0;
     DisplayHandler* _SettingsLocal = 0;
+    DisplayHandler* _TestLocal = 0;
     
     void printMenuOnLcd() {
       lcd.clear();
@@ -257,7 +260,7 @@ class MainMenu : public DisplayHandler {
       
   public:
     virtual DisplayHandler* button1Pressed() { 
-      itemIndex = ++itemIndex % 3;
+      itemIndex = (itemIndex + 1) % 4;
       printMenuOnLcd();
       return this;
     };
@@ -269,8 +272,12 @@ class MainMenu : public DisplayHandler {
         case 1:
           return _SettingsLocal;
         case 2:
-          return _InfoRollerLocal;
-      }
+          return _TestLocal;
+        case 3:
+          return _InfoRollerLocal;      
+	  }
+
+	  return this;
     };
 
     virtual void activate() {
@@ -279,10 +286,11 @@ class MainMenu : public DisplayHandler {
     
     virtual void updateLcd() { };
 
-    void Init(DisplayHandler* infoRoller, DisplayHandler* historyRoller, DisplayHandler* settings) {
+    void Init(DisplayHandler* infoRoller, DisplayHandler* historyRoller, DisplayHandler* settings, DisplayHandler* test) {
       _InfoRollerLocal = infoRoller;
       _HistoryRollerLocal = historyRoller;
       _SettingsLocal = settings;
+      _TestLocal = test;
     }
 };
 
@@ -428,8 +436,8 @@ class HistoryRoller : public DisplayHandler {
 
 class Settings : public DisplayHandler {
   private:
-    char* menuItems[3] = { "BACKLIGHT", "SOIL LIMIT", "EXIT" };
-    char* backlightOptions[3] = { "OFF", "AUTO", "ON" };
+    char const* menuItems[3] = { "BACKLIGHT", "SOIL LIMIT", "EXIT" };
+    char const* backlightOptions[3] = { "OFF", "AUTO", "ON" };
     int itemIndex = 0;
 
     DisplayHandler* _MainMenuLocal = 0;
@@ -453,7 +461,7 @@ class Settings : public DisplayHandler {
     }
     
     virtual DisplayHandler* button1Pressed() { 
-      itemIndex = ++itemIndex % 3;
+      itemIndex = (itemIndex + 1) % 3;
       printMenuOnLcd();
       return this; 
     }
@@ -461,7 +469,7 @@ class Settings : public DisplayHandler {
     virtual DisplayHandler* button2Pressed() { 
       switch (itemIndex) {
         case 0:
-          backlightMode = (((int)backlightMode) + 1) % 3;
+          backlightMode = static_cast<BacklightMode>((((int)backlightMode) + 1) % 3);
           printMenuOnLcd();
           break;
         case 1:
@@ -478,18 +486,71 @@ class Settings : public DisplayHandler {
     virtual void updateLcd() {};
 };
 
-class Test : DisplayHandler {
-    public:
-    virtual DisplayHandler* button1Pressed() { return this; }
-    virtual DisplayHandler* button2Pressed() { return this; }
-    virtual void activate() {};
-    virtual void updateLcd() {};
+class Test : public DisplayHandler {
+  private:
+    const char* menuItems[2] = { "TEST PUMP ONCE", "EXIT" };
+    int itemIndex = 0;
+    unsigned long pumpTestStart = 0;
+    bool pumpTestRunning = false;
+
+    DisplayHandler* _MainMenuLocal = 0;
+    
+    void printMenuOnLcd() {
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("TEST");
+      lcd.setCursor(0,1);
+      lcd.print(menuItems[itemIndex]);
+    };    
+    
+  public:
+    Test(MainMenu* mainMenu) {
+      _MainMenuLocal = mainMenu;
+    }
+    
+    virtual DisplayHandler* button1Pressed() { 
+      itemIndex = (itemIndex + 1) % 2;
+      printMenuOnLcd();
+      return this; 
+    }
+    
+    virtual DisplayHandler* button2Pressed() { 
+      switch (itemIndex) {
+        case 0:
+          pumpTestStart = millis();
+          analogWrite(PUMP1_PIN, pump1Power);
+          pumpTestRunning = true;
+          break;
+        case 1:
+          return _MainMenuLocal;
+      }
+      return this; 
+    }
+    
+    virtual void activate() {
+      printMenuOnLcd();  
+    };
+    
+    virtual void updateLcd() {
+      if (pumpTestRunning == true) {
+        unsigned long runningTime = millis() - pumpTestStart;
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("PUMP 1 TEST " + String(runningTime));
+        if (runningTime > 3000) {
+          analogWrite(PUMP1_PIN, 0);
+          pumpTestRunning = false;
+          printMenuOnLcd();
+        }
+      }
+    };
 };
 
 MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(_MainMenu);
 HistoryRoller* _HistoryRoller = new HistoryRoller(_MainMenu);
 Settings* _Settings = new Settings(_MainMenu);
+Test* _Test = new Test(_MainMenu);
 
 DisplayHandler* currentHandler;
 
@@ -524,7 +585,7 @@ void setup()
   digitalWrite(MOISTURE_PIN1, LOW);
   digitalWrite(MOISTURE_PIN2, LOW);
 
-  _MainMenu->Init(_InfoRoller, _HistoryRoller, _Settings);
+  _MainMenu->Init(_InfoRoller, _HistoryRoller, _Settings, _Test);
   currentHandler = _InfoRoller;
 
   Serial.println("setup finished");
