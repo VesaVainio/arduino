@@ -18,23 +18,68 @@ dht DHT;
 #define DHT_MODE_OK 1
 #define DHT_MODE_ERROR -1
 
-const int seriesCount = 6;
+enum BacklightMode : byte {
+	Off = 0,
+	Auto = 1,
+	On = 2
+};
 
+// store N (e.g 10 pcs) of these per plant
+struct WateringRecord // 8 bytes
+{
+	word hour; // cumulative running hours
+	word moistureAtStart;
+	word baseAmount; // base amount, not considering temp adjustment or adjustPercentage
+	word amount; // actual amount
+};
+
+// settings set by user, one record for each pot/pump
+struct WateringSettings // 8 bytes
+{
+	word moistureLimit; // moisture limit for starting watering
+	word potSqCm; // cm^2 of the pot, used to calculate the initial baseAmount
+	byte growthFactor; // how much should the baseAmount increase per 24h as per assumed growth of the plant (may be corrected for temp)
+	byte adjustPercentage; // manual adjustment of watering amount, 100 = 100% = 1
+	byte pumpPower; // the pump power for PWM, doesn't affect amounts (adjusted for different pump types, lift height etc)
+	byte startHour;
+};
+
+// needed only once, as only 1 watering can be in process at once
+struct WateringStatus // 11 bytes
+{
+	byte wateringSeriesIndex; // points to the series, 0 or 1
+	word targetAmount;
+	word usedAmount;
+	word previousCycleMoisture;
+	unsigned long previousCycleStartMillis;
+};
+
+/* Misc variables to add:
+- backlightMode
+- hour index (persistent cumulative running hours)
+- hour of day
+- watering record index
+- watering status?
+*/
+
+const int seriesCount = 4;
 const int seriesInUse = 3;
+const int minuteSeriesItems = 6;
 
 const int startOfMinuteSamples = 24; // 24 bytes for misc variables
-const int oneMinuteSeriesBytes = 12 * sizeof(float);
+const int oneMinuteSeriesBytes = minuteSeriesItems * sizeof(float);
 
 const int startOfHourSamples = startOfMinuteSamples + seriesCount * oneMinuteSeriesBytes;
 const int oneHourSeriesBytes = 24 * sizeof(float);
 
-byte dhtMode = DHT_MODE_OK;
+const int wateringSeriesCount = 2;
+const int wateringSeriesInUse = 1;
+const int wateringSeriesItems = 10;
 
-enum BacklightMode {
-  Off = 0,
-  Auto = 1,
-  On = 2
-};
+const int startOfWateringRecords = startOfHourSamples + seriesCount * oneHourSeriesBytes;
+const int oneWateringRecordSeriesBytes = wateringSeriesItems * sizeof(WateringRecord);
+
+byte dhtMode = DHT_MODE_OK;
 
 BacklightMode backlightMode = On;
 bool backlightOn = true;
@@ -101,7 +146,7 @@ void doSampling()
   putMinuteSample(2, minuteIndex, (float)currentSoil);
   minuteIndex++;
 
-  if (minuteIndex == 12)
+  if (minuteIndex == minuteSeriesItems)
   {
     minuteIndex = 0;
     putMinuteIndex(minuteIndex);
@@ -111,11 +156,11 @@ void doSampling()
     for (int s = 0; s < seriesInUse; s++) {
       float avgValue = 0;
   
-      for (int i = 0; i < 12; i++) {
+      for (int i = 0; i < minuteSeriesItems; i++) {
         avgValue += getMinuteSample(s, i);
       }
   
-      avgValue /= 12;
+      avgValue /= minuteSeriesItems;
 
       putHourSample(s, hourIndex, avgValue);
     }
@@ -208,25 +253,43 @@ float getHourSample(int series, int index)
   return value;
 }
 
-void putMinuteIndex(int index) {
+void putMinuteIndex(byte index) {
   EEPROM.put(0, index);
 }
 
-int getMinuteIndex() {
-  int index;
+byte getMinuteIndex() {
+  byte index;
   EEPROM.get(0, index);
   return index;
 }
 
-void putHourIndex(int index) {
-  EEPROM.put(2, index);
+void putHourIndex(byte index) {
+  EEPROM.put(1, index);
 }
 
-int getHourIndex() {
-  int index;
-  EEPROM.get(2, index);
+byte getHourIndex() {
+  byte index;
+  EEPROM.get(1, index);
   return index;
 }
+
+//void putBacklightMode(byte backlightMode)
+//{
+//	EEPROM.put(2, backlightMode);
+//}
+//
+//BacklightMode getBacklightMode()
+//{
+//	byte mode;
+//	EEPROM.get(2, mode);
+//	return static_cast<BacklightMode>(mode);
+//}
+
+//WateringSettings getWateringSettings(int index) {
+//	WateringSettings settings;
+//	EEPROM.get(6 + index * 8, settings);
+//	return settings;
+//}
 
 class DisplayHandler {
   public:
@@ -388,15 +451,15 @@ class HistoryRoller : public DisplayHandler {
       {
         lcd.clear();
         lcd.setCursor(0,0);
-        if (dispMode <= 11)
+        if (dispMode <= (minuteSeriesItems - 1))
         {
           int minuteIndex = getMinuteIndex() - 1 - dispMode;
           if (minuteIndex < 0)
           {
-            minuteIndex += 12;
+            minuteIndex += minuteSeriesItems;
           }
     
-          int minutes = (dispMode + 1) * 5;
+          int minutes = (dispMode + 1) * 10;
           if (minutes < 10)
           {
             lcd.print(" ");
@@ -407,13 +470,13 @@ class HistoryRoller : public DisplayHandler {
           lcd.print("    " + String(getMinuteSample(2, minuteIndex), 1));
         }
         else {
-          int hourIndex = getHourIndex() - 1 - (dispMode - 12);
+          int hourIndex = getHourIndex() - 1 - (dispMode - minuteSeriesItems);
           if (hourIndex < 0)
           {
             hourIndex += 24;  
           }
     
-          int hours = (dispMode - 11);
+          int hours = (dispMode - (minuteSeriesItems - 1));
           if (hours < 10)
           {
             lcd.print(" ");
@@ -425,7 +488,7 @@ class HistoryRoller : public DisplayHandler {
         }
         
         dispMode += 1;
-        if (dispMode > 35)
+        if (dispMode > (24 + minuteSeriesItems - 1))
         {
           dispMode = 0;
         }
@@ -469,7 +532,7 @@ class Settings : public DisplayHandler {
     virtual DisplayHandler* button2Pressed() { 
       switch (itemIndex) {
         case 0:
-          backlightMode = static_cast<BacklightMode>((((int)backlightMode) + 1) % 3);
+          backlightMode = static_cast<BacklightMode>((((byte)backlightMode) + 1) % 3);
           printMenuOnLcd();
           break;
         case 1:
