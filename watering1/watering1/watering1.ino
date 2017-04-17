@@ -25,14 +25,6 @@
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 dht DHT;
 
-/* Misc variables to add:
-- backlightMode
-- hour index (persistent cumulative running hours)
-- hour of day
-- watering record index
-- watering status?
-*/
-
 ErrorMode errorMode = Ok;
 
 bool backlightOn = true;
