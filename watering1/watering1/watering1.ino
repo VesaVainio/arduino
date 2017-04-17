@@ -1,8 +1,16 @@
+#include <LiquidCrystal_I2C.h>
+#include <dht.h>
 
 #include "EepromInterface.h"
 #include "Types.h"
-#include <LiquidCrystal_I2C.h>
-#include <dht.h>
+#include "MeasuringContext.h"
+
+#include "DisplayHandler.h"
+#include "MainMenu.h"
+#include "InfoRoller.h"
+#include "HistoryRoller.h"
+#include "SettingsMenu.h"
+#include "TestMenu.h"
 
 #define DHT11_PIN 2
 
@@ -14,12 +22,8 @@
 
 #define PUMP1_PIN 11
 
-#define DHT_MODE_OK 1
-#define DHT_MODE_ERROR -1
-
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 dht DHT;
-
 
 /* Misc variables to add:
 - backlightMode
@@ -29,63 +33,36 @@ dht DHT;
 - watering status?
 */
 
+ErrorMode errorMode = Ok;
 
-byte dhtMode = DHT_MODE_OK;
-
-BacklightMode backlightMode = On;
 bool backlightOn = true;
 
-int pump1Power = 100;
-
-int currentTemperature = 0;
-int currentHumidity = 0;
-int currentSoil = 0;
-unsigned long dhtUpdatedMillis = 0;
+int pump1Power = 80;
 
 unsigned long nextMinuteSampleMillis = 0;
-
-unsigned long moistureUpdatedMillis = 0;
-byte moistureReadingState = 0;
-
 unsigned long buttonUpdatedMillis = 0;
+
 int button1State = LOW;
 int button2State = LOW;
 bool buttonStateChanging = false;
 
-void setMode(int newMode)
+MeasuringContext measuringContext;
+
+void setErrorMode(ErrorMode newMode)
 {
-	if (newMode != dhtMode) {
+	if (newMode != errorMode) {
 		lcd.clear();
+		switch (newMode)
+		{
+			case DhtError:
+				lcd.setCursor(0, 0);
+				lcd.print("DHT11 ERROR");
+				break;
+			default:
+				break;
+		}
 	}
-	dhtMode = newMode;
-}
-
-void updateMoisture()
-{
-	unsigned long currentMillis = millis();
-	if (moistureReadingState == 0 && currentMillis > moistureUpdatedMillis + 15000)
-	{
-		moistureReadingState = 1;
-		digitalWrite(MOISTURE_PIN1, HIGH);
-		digitalWrite(MOISTURE_PIN2, LOW);
-		moistureUpdatedMillis = currentMillis;
-	}
-	else if (moistureReadingState == 1 && currentMillis > moistureUpdatedMillis + 200)
-	{
-		currentSoil = analogRead(0); // actually get the reading
-
-		moistureReadingState = 2;
-		digitalWrite(MOISTURE_PIN1, LOW);
-		digitalWrite(MOISTURE_PIN2, HIGH);
-		moistureUpdatedMillis = currentMillis;
-	}
-	else if (moistureReadingState == 2 && currentMillis > moistureUpdatedMillis + 200)
-	{
-		moistureReadingState = 0;
-		digitalWrite(MOISTURE_PIN1, LOW);
-		digitalWrite(MOISTURE_PIN2, LOW);
-		moistureUpdatedMillis = currentMillis;
-	}
+	errorMode = newMode;
 }
 
 void doSampling()
@@ -100,9 +77,9 @@ void doSampling()
 	int minuteIndex = getMinuteIndex();
 
 	nextMinuteSampleMillis += 300000ul;
-	putMinuteSample(0, minuteIndex, (float)currentTemperature);
-	putMinuteSample(1, minuteIndex, (float)currentHumidity);
-	putMinuteSample(2, minuteIndex, (float)currentSoil);
+	putMinuteSample(0, minuteIndex, (float)measuringContext.getCurrentTemperature());
+	putMinuteSample(1, minuteIndex, (float)measuringContext.getCurrentAirHumidity());
+	putMinuteSample(2, minuteIndex, (float)measuringContext.getCurrentSoil());
 	minuteIndex++;
 
 	if (minuteIndex == minuteSeriesItems)
@@ -137,368 +114,11 @@ void doSampling()
 	}
 }
 
-void updateDht()
-{
-	unsigned long currentMillis = millis();
-	if (currentMillis > dhtUpdatedMillis + 200)
-	{
-		int chk = DHT.read11(DHT11_PIN);
-		if (chk < 0) {
-			setMode(DHT_MODE_ERROR);
-			lcd.setCursor(0, 0);
-			lcd.print("DHT11 ERROR ");
-			lcd.print(chk);
-		}
-		else {
-			currentTemperature = DHT.temperature;
-			currentHumidity = DHT.humidity;
-			setMode(DHT_MODE_OK);
-		}
-		dhtUpdatedMillis = currentMillis;
-	}
-}
-
-float getNHoursAvg(int series, int n)
-{
-	int index = getHourIndex();
-	float avg = 0;
-	for (int i = 0; i < n; i++)
-	{
-		index--;
-		if (index < 0)
-		{
-			index = 23;
-		}
-		avg += getHourSample(series, index);
-	}
-
-	avg /= n;
-	return avg;
-}
-
-class DisplayHandler {
-public:
-	virtual DisplayHandler* button1Pressed() { return this; }
-	virtual DisplayHandler* button2Pressed() { return this; }
-	virtual void activate() {};
-	virtual void updateLcd() {};
-};
-
-class HistoryRoller;
-class InfoRoller;
-class Settings;
-
-class MainMenu : public DisplayHandler {
-private:
-	char const* menuItems[4] = { "SHOW HISTORY", "SETTINGS", "TEST", "EXIT" };
-	int itemIndex = 0;
-
-	DisplayHandler* _InfoRollerLocal = 0;
-	DisplayHandler* _HistoryRollerLocal = 0;
-	DisplayHandler* _SettingsLocal = 0;
-	DisplayHandler* _TestLocal = 0;
-
-	void printMenuOnLcd() {
-		lcd.clear();
-		lcd.setCursor(0, 0);
-		lcd.print("MENU");
-		lcd.setCursor(0, 1);
-		lcd.print(menuItems[itemIndex]);
-	};
-
-public:
-	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 4;
-		printMenuOnLcd();
-		return this;
-	};
-
-	virtual DisplayHandler* button2Pressed() {
-		switch (itemIndex) {
-		case 0:
-			return _HistoryRollerLocal;
-		case 1:
-			return _SettingsLocal;
-		case 2:
-			return _TestLocal;
-		case 3:
-			return _InfoRollerLocal;
-		}
-
-		return this;
-	};
-
-	virtual void activate() {
-		printMenuOnLcd();
-	}
-
-	virtual void updateLcd() { };
-
-	void Init(DisplayHandler* infoRoller, DisplayHandler* historyRoller, DisplayHandler* settings, DisplayHandler* test) {
-		_InfoRollerLocal = infoRoller;
-		_HistoryRollerLocal = historyRoller;
-		_SettingsLocal = settings;
-		_TestLocal = test;
-	}
-};
-
-class InfoRoller : public DisplayHandler {
-private:
-	MainMenu* _MainMenu;
-
-	enum Mode {
-		Current,
-		Hours1,
-		Hours6,
-		Stats
-	};
-
-	Mode mode;
-	unsigned long lcdUpdatedMillis;
-
-public:
-	InfoRoller(MainMenu* mainMenu) {
-		_MainMenu = mainMenu;
-		mode = Current;
-		lcdUpdatedMillis = 0;
-	}
-
-	virtual DisplayHandler* button1Pressed() {
-		return _MainMenu;
-	}
-
-	virtual void activate() {
-		lcdUpdatedMillis = 0;
-	};
-
-	virtual void updateLcd() {
-		unsigned long currentMillis = millis();
-		if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 2000)
-		{
-			lcd.clear();
-			lcd.setCursor(0, 0);
-
-			if (mode == Stats)
-			{
-				mode = Current;
-				lcd.print("tmp  " + String(currentTemperature) + " hmd " + String(currentHumidity));
-				lcd.setCursor(0, 1);
-				lcd.print("soil " + String(currentSoil));
-			}
-			else if (mode == Current)
-			{
-				mode = Hours1;
-				lcd.print("1h " + String(getNHoursAvg(0, 1), 1) + " " + String(getNHoursAvg(1, 1), 1));
-				lcd.setCursor(0, 1);
-				lcd.print("   " + String(getNHoursAvg(2, 1), 1) + "  ");
-			}
-			else if (mode == Hours1)
-			{
-				mode = Hours6;
-				lcd.print("6h " + String(getNHoursAvg(0, 6), 1) + " " + String(getNHoursAvg(1, 6), 1));
-				lcd.setCursor(0, 1);
-				lcd.print("   " + String(getNHoursAvg(2, 6), 1));
-			}
-			else if (mode == Hours6)
-			{
-				mode = Stats;
-				lcd.print("run " + String(currentMillis / (1000 * 60ul * 60ul)) + "h " + String((currentMillis % (1000 * 60ul * 60ul)) / (1000 * 60ul)) + "min");
-				lcd.setCursor(0, 1);
-				lcd.print(String(currentMillis));
-			}
-
-			lcdUpdatedMillis = currentMillis;
-		}
-	};
-};
-
-class HistoryRoller : public DisplayHandler {
-private:
-	MainMenu* _MainMenuLocal;
-	byte dispMode;
-	unsigned long lcdUpdatedMillis;
-public:
-	HistoryRoller(MainMenu* mainMenu) {
-		_MainMenuLocal = mainMenu;
-	}
-
-	virtual DisplayHandler* button1Pressed() { return _MainMenuLocal; }
-	virtual DisplayHandler* button2Pressed() { return this; }
-
-	virtual void activate() {
-		dispMode = 0;
-		lcdUpdatedMillis = 0;
-	};
-
-	virtual void updateLcd() {
-		unsigned long currentMillis = millis();
-		if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 400)
-		{
-			lcd.clear();
-			lcd.setCursor(0, 0);
-			if (dispMode <= (minuteSeriesItems - 1))
-			{
-				int minuteIndex = getMinuteIndex() - 1 - dispMode;
-				if (minuteIndex < 0)
-				{
-					minuteIndex += minuteSeriesItems;
-				}
-
-				int minutes = (dispMode + 1) * 10;
-				if (minutes < 10)
-				{
-					lcd.print(" ");
-				}
-
-				lcd.print(String(minutes) + "m " + String(getMinuteSample(0, minuteIndex), 1) + " " + String(getMinuteSample(1, minuteIndex), 1));
-				lcd.setCursor(0, 1);
-				lcd.print("    " + String(getMinuteSample(2, minuteIndex), 1));
-			}
-			else {
-				int hourIndex = getHourIndex() - 1 - (dispMode - minuteSeriesItems);
-				if (hourIndex < 0)
-				{
-					hourIndex += 24;
-				}
-
-				int hours = (dispMode - (minuteSeriesItems - 1));
-				if (hours < 10)
-				{
-					lcd.print(" ");
-				}
-
-				lcd.print(String(hours) + "h " + String(getHourSample(0, hourIndex), 1) + " " + String(getHourSample(1, hourIndex), 1));
-				lcd.setCursor(0, 1);
-				lcd.print("    " + String(getHourSample(2, hourIndex), 1));
-			}
-
-			dispMode += 1;
-			if (dispMode > (24 + minuteSeriesItems - 1))
-			{
-				dispMode = 0;
-			}
-			lcdUpdatedMillis = currentMillis;
-		}
-	};
-};
-
-class Settings : public DisplayHandler {
-private:
-	char const* menuItems[3] = { "BACKLIGHT", "SOIL LIMIT", "EXIT" };
-	char const* backlightOptions[3] = { "OFF", "AUTO", "ON" };
-	int itemIndex = 0;
-
-	DisplayHandler* _MainMenuLocal = 0;
-
-	void printMenuOnLcd() {
-		lcd.clear();
-		lcd.setCursor(0, 0);
-		lcd.print("SET");
-		lcd.setCursor(0, 1);
-		lcd.print(menuItems[itemIndex]);
-		lcd.print(' ');
-		switch (itemIndex) {
-		case 0:
-			lcd.print(backlightOptions[backlightMode]);
-		}
-	};
-
-public:
-	Settings(MainMenu* mainMenu) {
-		_MainMenuLocal = mainMenu;
-	}
-
-	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 3;
-		printMenuOnLcd();
-		return this;
-	}
-
-	virtual DisplayHandler* button2Pressed() {
-		switch (itemIndex) {
-		case 0:
-			backlightMode = static_cast<BacklightMode>((((byte)backlightMode) + 1) % 3);
-			printMenuOnLcd();
-			break;
-		case 1:
-			break;
-		case 2:
-			return _MainMenuLocal;
-		}
-		return this;
-	}
-
-	virtual void activate() {
-		printMenuOnLcd();
-	};
-	virtual void updateLcd() {};
-};
-
-class Test : public DisplayHandler {
-private:
-	const char* menuItems[2] = { "TEST PUMP ONCE", "EXIT" };
-	int itemIndex = 0;
-	unsigned long pumpTestStart = 0;
-	bool pumpTestRunning = false;
-
-	DisplayHandler* _MainMenuLocal = 0;
-
-	void printMenuOnLcd() {
-		lcd.clear();
-		lcd.setCursor(0, 0);
-		lcd.print("TEST");
-		lcd.setCursor(0, 1);
-		lcd.print(menuItems[itemIndex]);
-	};
-
-public:
-	Test(MainMenu* mainMenu) {
-		_MainMenuLocal = mainMenu;
-	}
-
-	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 2;
-		printMenuOnLcd();
-		return this;
-	}
-
-	virtual DisplayHandler* button2Pressed() {
-		switch (itemIndex) {
-		case 0:
-			pumpTestStart = millis();
-			analogWrite(PUMP1_PIN, pump1Power);
-			pumpTestRunning = true;
-			break;
-		case 1:
-			return _MainMenuLocal;
-		}
-		return this;
-	}
-
-	virtual void activate() {
-		printMenuOnLcd();
-	};
-
-	virtual void updateLcd() {
-		if (pumpTestRunning == true) {
-			unsigned long runningTime = millis() - pumpTestStart;
-			lcd.clear();
-			lcd.setCursor(0, 0);
-			lcd.print("PUMP 1 TEST " + String(runningTime));
-			if (runningTime > 3000) {
-				analogWrite(PUMP1_PIN, 0);
-				pumpTestRunning = false;
-				printMenuOnLcd();
-			}
-		}
-	};
-};
-
 MainMenu* _MainMenu = new MainMenu();
-InfoRoller* _InfoRoller = new InfoRoller(_MainMenu);
-HistoryRoller* _HistoryRoller = new HistoryRoller(_MainMenu);
-Settings* _Settings = new Settings(_MainMenu);
-Test* _Test = new Test(_MainMenu);
+InfoRoller* _InfoRoller = new InfoRoller(&lcd, &measuringContext, _MainMenu);
+HistoryRoller* _HistoryRoller = new HistoryRoller(&lcd, _MainMenu);
+SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu);
+TestMenu* _Test = new TestMenu(&lcd, _MainMenu, PUMP1_PIN, pump1Power);
 
 DisplayHandler* currentHandler;
 
@@ -545,6 +165,8 @@ void updateButtonsWithDebounce()
 }
 
 void updateBacklight() {
+	BacklightMode backlightMode = getBacklightMode();
+
 	if (backlightMode == On && backlightOn == false) {
 		lcd.backlight();
 		backlightOn = true;
@@ -579,25 +201,23 @@ void setup()
 	pinMode(BUTTON1_PIN, INPUT);
 	pinMode(BUTTON2_PIN, INPUT);
 
+	delay(10);
+
 	for (int i = 0; i < 3; i++)
 	{
-		digitalWrite(MOISTURE_PIN1, HIGH);
-		digitalWrite(MOISTURE_PIN2, LOW);
+		measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
 		lcd.noBacklight();
 		delay(250);
 
-		currentSoil = analogRead(0); // get the moisture reading
-
-		digitalWrite(MOISTURE_PIN1, LOW);
+		measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
 		digitalWrite(MOISTURE_PIN2, HIGH);
 		lcd.backlight();
 		delay(250);
 	}
 
-	digitalWrite(MOISTURE_PIN1, LOW);
-	digitalWrite(MOISTURE_PIN2, LOW);
+	measuringContext.moistureInterval = 15000;
 
-	_MainMenu->Init(_InfoRoller, _HistoryRoller, _Settings, _Test);
+	_MainMenu->Init(&lcd, _InfoRoller, _HistoryRoller, _Settings, _Test);
 	currentHandler = _InfoRoller;
 
 	Serial.println("setup finished");
@@ -605,12 +225,14 @@ void setup()
 
 void loop()
 {
-	updateDht();
-	updateMoisture();
+	ErrorMode errorMode = measuringContext.updateDht(DHT, DHT11_PIN);
+	setErrorMode(errorMode);
+
+	measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
 	updateButtonsWithDebounce();
 	updateBacklight();
 
-	if (dhtMode == DHT_MODE_OK)
+	if (errorMode == Ok)
 	{
 		doSampling();
 		currentHandler->updateLcd();
@@ -618,4 +240,3 @@ void loop()
 
 	delay(10);
 }
-

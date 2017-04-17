@@ -8,6 +8,11 @@ enum BacklightMode : byte {
 	On = 2
 };
 
+enum ErrorMode : byte {
+	Ok,
+	DhtError
+};
+
 // store N (e.g 10 pcs) of these per plant
 struct WateringRecord // 8 bytes
 {

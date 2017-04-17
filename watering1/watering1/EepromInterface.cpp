@@ -86,3 +86,22 @@ WateringSettings getWateringSettings(int index) {
 void putWateringSettings(int index, WateringSettings settings) {
 	EEPROM.put(6 + index * 8, settings);
 }
+
+
+float getNHoursAvg(int series, int n)
+{
+	int index = getHourIndex();
+	float avg = 0;
+	for (int i = 0; i < n; i++)
+	{
+		index--;
+		if (index < 0)
+		{
+			index = 23;
+		}
+		avg += getHourSample(series, index);
+	}
+
+	avg /= n;
+	return avg;
+}

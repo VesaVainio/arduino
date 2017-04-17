@@ -27,12 +27,36 @@
     <ClInclude Include="Types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DisplayHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="InfoRoller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeasuringContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HistoryRoller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SettingsMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TestMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EepromInterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Types.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MeasuringContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

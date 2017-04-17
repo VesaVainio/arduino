@@ -24,3 +24,5 @@ void putBacklightMode(BacklightMode backlightMode);
 
 WateringSettings getWateringSettings(int index);
 void putWateringSettings(int index, WateringSettings settings);
+
+float getNHoursAvg(int series, int n);

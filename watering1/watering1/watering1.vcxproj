@@ -80,12 +80,20 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DisplayHandler.h" />
     <ClInclude Include="EepromInterface.h" />
+    <ClInclude Include="HistoryRoller.h" />
+    <ClInclude Include="InfoRoller.h" />
+    <ClInclude Include="MainMenu.h" />
+    <ClInclude Include="MeasuringContext.h" />
+    <ClInclude Include="SettingsMenu.h" />
+    <ClInclude Include="TestMenu.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="__vm\.watering1.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EepromInterface.cpp" />
+    <ClCompile Include="MeasuringContext.cpp" />
     <ClCompile Include="Types.cpp" />
   </ItemGroup>
   <PropertyGroup>
