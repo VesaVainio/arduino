@@ -13,11 +13,16 @@ float getMinuteSample(int series, int index);
 void putHourSample(int series, int index, float value);
 float getHourSample(int series, int index);
 
+float getNHoursAvg(int series, int n);
+
 void putMinuteIndex(byte index);
 byte getMinuteIndex();
 
 void putHourIndex(byte index);
 byte getHourIndex();
+
+byte getWateringRecordIndex(int series);
+void putWateringRecordIndex(int series, int index);
 
 BacklightMode getBacklightMode();
 void putBacklightMode(BacklightMode backlightMode);
@@ -25,4 +30,11 @@ void putBacklightMode(BacklightMode backlightMode);
 WateringSettings getWateringSettings(int index);
 void putWateringSettings(int index, WateringSettings settings);
 
-float getNHoursAvg(int series, int n);
+WateringStatus getWateringStatus();
+void putWateringStatus(WateringStatus status);
+
+word getCumulativeRunningHour();
+void putCumulativeRunningHour(word runningHour);
+
+word getHourOfDay();
+void putHourOfDay(word hourOfDay);
