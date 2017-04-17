@@ -16,6 +16,11 @@ const int wateringSeriesItems = 10;
 const int startOfWateringRecords = startOfHourSamples + seriesCount * oneHourSeriesBytes;
 const int oneWateringRecordSeriesBytes = wateringSeriesItems * sizeof(WateringRecord);
 
+void clearAllSamples() {
+	for (int i = startOfMinuteSamples; i < 1024; i++) {
+		EEPROM.put(i, 0);
+	}
+}
 
 void putMinuteSample(int series, int index, float value)
 {
@@ -70,6 +75,11 @@ void putMinuteIndex(byte index) {
 byte getMinuteIndex() {
 	byte index;
 	EEPROM.get(0, index);
+
+	if (index >= minuteSeriesItems) {
+		return 0;
+	}
+
 	return index;
 }
 
@@ -82,6 +92,11 @@ void putHourIndex(byte index) {
 byte getHourIndex() {
 	byte index;
 	EEPROM.get(5, index);
+
+	if (index >= 24) {
+		return 0;
+	}
+
 	return index;
 }
 
@@ -109,40 +124,40 @@ void putBacklightMode(BacklightMode backlightMode)
 
 WateringSettings getWateringSettings(int index) {
 	WateringSettings settings;
-	EEPROM.get(10 + index * 8, settings);
+	EEPROM.get(10 + index * 10, settings);
 	return settings;
 }
 
 void putWateringSettings(int index, WateringSettings settings) {
-	EEPROM.put(10 + index * 8, settings);
-} // needs 3 * 8 bytes = 24 bytes
+	EEPROM.put(10 + index * 10, settings);
+} // needs 3 * 9 bytes (3 * 1 bytes to spare) = 30 bytes
 
 WateringStatus getWateringStatus() {
 	WateringStatus status;
-	EEPROM.get(34, status);
+	EEPROM.get(40, status);
 	return status;
 }
 
 void putWateringStatus(WateringStatus status) {
-	EEPROM.put(34, status);
-} // nneds 11 bytes
+	EEPROM.put(40, status);
+} // needs 11 bytes (2 bytes to spare) = 13 bytes
 
 word getCumulativeRunningHour() {
 	word runningHour;
-	EEPROM.get(45, runningHour);
+	EEPROM.get(53, runningHour);
 	return runningHour;
 }
 
 void putCumulativeRunningHour(word runningHour) {
-	EEPROM.put(45, runningHour);
+	EEPROM.put(53, runningHour);
 }
 
-word getHourOfDay() {
-	word hourOfDay;
-	EEPROM.get(46, hourOfDay);
+byte getHourOfDay() {
+	byte hourOfDay;
+	EEPROM.get(55, hourOfDay);
 	return hourOfDay;
 }
 
-void putHourOfDay(word hourOfDay) {
-	EEPROM.put(46, hourOfDay);
+void putHourOfDay(byte hourOfDay) {
+	EEPROM.put(55, hourOfDay);
 }

@@ -31,6 +31,17 @@ struct WateringSettings // 8 bytes
 	byte adjustPercentage; // manual adjustment of watering amount, 100 = 100% = 1
 	byte pumpPower; // the pump power for PWM, doesn't affect amounts (adjusted for different pump types, lift height etc)
 	byte startHour;
+	bool enabled;
+
+	WateringSettings() {
+		moistureLimit = 200;
+		potSqCm = 75;
+		growthFactor = 0;
+		adjustPercentage = 100;
+		pumpPower = 80;
+		startHour = 19;
+		enabled = false;
+	}
 };
 
 // needed only once, as only 1 watering can be in process at once
@@ -41,7 +52,12 @@ struct WateringStatus // 11 bytes
 	word usedAmount;
 	word previousCycleMoisture;
 	unsigned long previousCycleStartMillis;
+
+	WateringStatus() {
+		wateringSeriesIndex = 0;
+		targetAmount = 0;
+		usedAmount = 0;
+		previousCycleMoisture = 0;
+		previousCycleStartMillis = 0;
+	}
 };
-
-
-

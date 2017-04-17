@@ -86,9 +86,11 @@
     <ClInclude Include="InfoRoller.h" />
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MeasuringContext.h" />
+    <ClInclude Include="ResetMenu.h" />
     <ClInclude Include="SettingsMenu.h" />
     <ClInclude Include="TestMenu.h" />
     <ClInclude Include="Types.h" />
+    <ClInclude Include="WateringSettingsMenu.h" />
     <ClInclude Include="__vm\.watering1.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>

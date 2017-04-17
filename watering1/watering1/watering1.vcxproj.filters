@@ -48,6 +48,12 @@
     <ClInclude Include="TestMenu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WateringSettingsMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ResetMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EepromInterface.cpp">

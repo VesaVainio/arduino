@@ -7,6 +7,8 @@ const int seriesCount = 4;
 const int seriesInUse = 3;
 const int minuteSeriesItems = 6;
 
+void clearAllSamples();
+
 void putMinuteSample(int series, int index, float value);
 float getMinuteSample(int series, int index);
 
@@ -36,5 +38,5 @@ void putWateringStatus(WateringStatus status);
 word getCumulativeRunningHour();
 void putCumulativeRunningHour(word runningHour);
 
-word getHourOfDay();
-void putHourOfDay(word hourOfDay);
+byte getHourOfDay();
+void putHourOfDay(byte hourOfDay);
