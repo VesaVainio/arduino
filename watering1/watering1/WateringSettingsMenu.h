@@ -51,7 +51,7 @@ public:
 	}
 
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 3;
+		itemIndex = (itemIndex + 1) % 8;
 		printMenuOnLcd();
 		return this;
 	}
@@ -86,6 +86,7 @@ public:
 		}
 
 		putWateringSettings(wateringSeries, settings);
+		printMenuOnLcd();
 		return this;
 	}
 

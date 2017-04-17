@@ -202,7 +202,6 @@ void setup()
 		delay(250);
 
 		measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
-		digitalWrite(MOISTURE_PIN2, HIGH);
 		lcd.backlight();
 		delay(250);
 	}

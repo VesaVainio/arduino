@@ -2,6 +2,7 @@
 
 #include "EepromInterface.h"
 #include "WateringSettingsMenu.h"
+#include "ResetMenu.h"
 
 class SettingsMenu : public DisplayHandler {
 private:
@@ -36,10 +37,11 @@ public:
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
 		_WateringSettingsMenu = new WateringSettingsMenu(lcd, this);
+		_ResetMenu = new ResetMenu(lcd, this);
 	}
 
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 3;
+		itemIndex = (itemIndex + 1) % 5;
 		printMenuOnLcd();
 		return this;
 	}
@@ -52,7 +54,6 @@ public:
 			case 0:
 				backlightMode = static_cast<BacklightMode>((((byte)backlightMode) + 1) % 3);
 				putBacklightMode(backlightMode);
-				printMenuOnLcd();
 				break;
 			case 1:
 				putHourOfDay(increaseSetting(1, 24, 1, hourOfDay));
@@ -64,6 +65,8 @@ public:
 			case 4:
 				return _MainMenuLocal;
 		}
+
+		printMenuOnLcd();
 		return this;
 	}
 
