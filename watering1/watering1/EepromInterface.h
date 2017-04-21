@@ -6,6 +6,7 @@
 const int seriesCount = 4;
 const int seriesInUse = 3;
 const int minuteSeriesItems = 6;
+const int wateringSeriesItems = 10;
 
 void clearAllSamples();
 
@@ -14,6 +15,9 @@ float getMinuteSample(int series, int index);
 
 void putHourSample(int series, int index, float value);
 float getHourSample(int series, int index);
+
+void putWateringRecord(int series, int index, WateringRecord wateringRecord);
+WateringRecord getWateringRecord(int series, int index);
 
 float getNHoursAvg(int series, int n);
 

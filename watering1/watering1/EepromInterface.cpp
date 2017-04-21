@@ -11,7 +11,6 @@ const int oneHourSeriesBytes = 24 * sizeof(float);
 
 const int wateringSeriesCount = 2;
 const int wateringSeriesInUse = 1;
-const int wateringSeriesItems = 10;
 
 const int startOfWateringRecords = startOfHourSamples + seriesCount * oneHourSeriesBytes;
 const int oneWateringRecordSeriesBytes = wateringSeriesItems * sizeof(WateringRecord);
@@ -66,6 +65,18 @@ float getNHoursAvg(int series, int n)
 
 	avg /= n;
 	return avg;
+}
+
+void putWateringRecord(int series, int index, WateringRecord wateringRecord) {
+	int address = startOfWateringRecords + series * oneWateringRecordSeriesBytes + index * sizeof(WateringRecord);
+	EEPROM.put(address, wateringRecord);
+}
+
+WateringRecord getWateringRecord(int series, int index) {
+	int address = startOfWateringRecords + series * oneWateringRecordSeriesBytes + index * sizeof(WateringRecord);
+	WateringRecord record;
+	EEPROM.get(address, record);
+	return record;
 }
 
 void putMinuteIndex(byte index) {
@@ -140,7 +151,7 @@ WateringStatus getWateringStatus() {
 
 void putWateringStatus(WateringStatus status) {
 	EEPROM.put(40, status);
-} // needs 11 bytes (2 bytes to spare) = 13 bytes
+} // needs 13 bytes 
 
 word getCumulativeRunningHour() {
 	word runningHour;

@@ -40,6 +40,8 @@ bool buttonStateChanging = false;
 
 MeasuringContext measuringContext;
 
+byte wateringMode = Idle;
+
 void setErrorMode(ErrorMode newMode)
 {
 	if (newMode != errorMode) {
@@ -110,7 +112,7 @@ MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(&lcd, &measuringContext, _MainMenu);
 HistoryRoller* _HistoryRoller = new HistoryRoller(&lcd, _MainMenu);
 SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu);
-TestMenu* _Test = new TestMenu(&lcd, _MainMenu, PUMP1_PIN, pump1Power);
+TestMenu* _Test = new TestMenu(&lcd, _MainMenu, PUMP1_PIN);
 
 DisplayHandler* currentHandler;
 
@@ -180,6 +182,133 @@ void updateBacklight() {
 	}
 }
 
+void updateWatering() {
+	WateringSettings settings = getWateringSettings(0);
+	unsigned long currentMillis = millis();
+	word currentSoil = abs(measuringContext.getCurrentSoil());
+
+	if (currentSoil < 50) {
+		// moisture reading abnormal
+		analogWrite(PUMP1_PIN, 0);
+		return;
+	}
+
+	if (wateringMode == Idle) {
+		if (settings.enabled && currentSoil < settings.moistureLimit) {
+			WateringStatus status;
+			status.wateringSeriesIndex = 0;
+			word baseAmount = getBaseAmount(settings, 0);
+			word totalAmount = calculateTargetAmount(settings, 0, baseAmount);
+			word dose = totalAmount / 3;
+			totalAmount = dose * 3;
+			status.targetAmount = totalAmount;
+			status.previousCycleMoisture = currentSoil;
+			status.previousCycleStartMillis = currentMillis;
+			status.dose = dose;
+			putWateringStatus(status);
+			storeWateringRecord(baseAmount, totalAmount, currentSoil, 0);
+			Serial.println("Starting pump");
+			analogWrite(PUMP1_PIN, settings.pumpPower);
+			wateringMode = PumpRunning;
+		}
+	}
+	else if (wateringMode == PumpRunning) {
+		WateringStatus status = getWateringStatus();
+		if (currentMillis > status.previousCycleStartMillis + 500 + status.dose) {
+			analogWrite(PUMP1_PIN, 0);
+			status.usedAmount = status.usedAmount + (currentMillis - status.previousCycleStartMillis);
+			Serial.println("Pump stopped, usedAmount now " + String(status.usedAmount));
+			status.previousCycleStartMillis = currentMillis;
+			putWateringStatus(status);
+			if (status.usedAmount >= status.targetAmount) {
+				wateringMode = Idle;
+				storeWateringResult(Success);
+				Serial.println("Watering mode Idle");
+			}
+			else {
+				wateringMode = Interval;
+				Serial.println("Watering mode Interval");
+			}
+		}
+	}
+	else if (wateringMode == Interval) {
+		WateringStatus status = getWateringStatus();
+		if (currentMillis > status.previousCycleStartMillis + 35000) {
+			if (currentSoil > status.previousCycleMoisture + 10) {
+				status.previousCycleStartMillis = currentMillis;
+				status.previousCycleMoisture = currentSoil;
+				putWateringStatus(status);
+				Serial.println("Starting pump");
+				analogWrite(PUMP1_PIN, settings.pumpPower);
+				wateringMode = PumpRunning;
+			}
+			else {
+				storeWateringResult(MoistureNotIncreased);
+				wateringMode = Idle;
+			}
+		}
+	}
+}
+
+void storeWateringRecord(word baseAmount, word totalAmount, word moistureAtStart, byte series) {
+	WateringRecord newRecord;
+	newRecord.baseAmount = baseAmount;
+	newRecord.totalAmount = totalAmount;
+	newRecord.moistureAtStart = measuringContext.getCurrentSoil();
+	// TODO set hour for newRecord
+	int index = (getWateringRecordIndex(series) + 1) % wateringSeriesItems;
+	putWateringRecord(series, index, newRecord);
+	putWateringRecordIndex(series, index);
+}
+
+void storeWateringResult(WateringResult result) {
+	byte index = getWateringRecordIndex(0);
+	WateringRecord record = getWateringRecord(0, index);
+	record.result = result;
+	putWateringRecord(0, index, record);
+}
+
+word getBaseAmount(WateringSettings settings, byte series) {
+	WateringRecord previousRecord = getWateringRecord(series, getWateringRecordIndex(0));
+	word baseAmount;
+	if (previousRecord.baseAmount > 0) {
+		baseAmount = previousRecord.baseAmount;
+	}
+	else {
+		// TODO make the factor 120 a setting
+		baseAmount = settings.potSqCm * 80;
+	}
+	return baseAmount;
+}
+
+word calculateTargetAmount(WateringSettings settings, byte series, word baseAmount) {
+	Serial.println("Base amount: " + String(baseAmount));
+
+	int moistureDifference = settings.moistureLimit - measuringContext.getCurrentSoil();
+	Serial.println("Moisture difference: " + String(moistureDifference));
+	// TODO make a setting
+	float moistureDifferencePart = (float)(moistureDifference) / 200.0 * baseAmount;
+	Serial.println("Moisture difference part: " + String(moistureDifferencePart));
+
+	// TODO make settings
+	float twelveHoursAvgTemp = getNHoursAvg(0, 12);
+	float tempCoefficient = 0;
+	if (twelveHoursAvgTemp > 24.0) {
+		tempCoefficient = (twelveHoursAvgTemp - 24.0) * 0.1;
+	}
+	else if (twelveHoursAvgTemp < 15.0) {
+		tempCoefficient = (twelveHoursAvgTemp - 15.0) * 0.05;
+	}
+	Serial.println("Temperature coefficient: " + String(tempCoefficient));
+	float tempPart = baseAmount * tempCoefficient;
+	Serial.println("Temperature part: " + String(tempPart));
+
+	word totalAmount = (word)(baseAmount + moistureDifferencePart + tempPart);
+	Serial.println("Total amount: " + String(totalAmount));
+
+	return totalAmount;
+}
+
 void setup()
 {
 	Serial.begin(9600);
@@ -211,6 +340,11 @@ void setup()
 	_MainMenu->Init(&lcd, _InfoRoller, _HistoryRoller, _Settings, _Test);
 	currentHandler = _InfoRoller;
 
+	//WateringStatus status = getWateringStatus();
+	//if (status.usedAmount < status.targetAmount) {
+	//	wateringMode = Interval;
+	//}
+
 	Serial.println("setup finished");
 }
 
@@ -222,6 +356,7 @@ void loop()
 	measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
 	updateButtonsWithDebounce();
 	updateBacklight();
+	updateWatering();
 
 	if (errorMode == Ok)
 	{

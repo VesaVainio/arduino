@@ -13,13 +13,25 @@ enum ErrorMode : byte {
 	DhtError
 };
 
+enum WateringMode : byte {
+	Idle,
+	PumpRunning,
+	Interval
+};
+
+enum WateringResult : byte {
+	Success,
+	MoistureNotIncreased
+};
+
 // store N (e.g 10 pcs) of these per plant
 struct WateringRecord // 8 bytes
 {
 	word hour; // cumulative running hours
 	word moistureAtStart;
 	word baseAmount; // base amount, not considering temp adjustment or adjustPercentage
-	word amount; // actual amount
+	word totalAmount; // actual amount
+	WateringResult result;
 };
 
 // settings set by user, one record for each pot/pump
@@ -50,6 +62,7 @@ struct WateringStatus // 11 bytes
 	byte wateringSeriesIndex; // points to the series, 0 or 1
 	word targetAmount;
 	word usedAmount;
+	word dose;
 	word previousCycleMoisture;
 	unsigned long previousCycleStartMillis;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "EepromInterface.h"
 
 class TestMenu : public DisplayHandler {
 private:
@@ -10,7 +11,6 @@ private:
 	bool pumpTestRunning = false;
 	
 	int _pump1Pin = 0;
-	int _pump1Power = 0;
 
 	DisplayHandler* _MainMenuLocal = 0;
 	LiquidCrystal_I2C* _lcd;
@@ -24,11 +24,10 @@ private:
 	};
 
 public:
-	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int pump1Pin, int pump1Power) {
+	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int pump1Pin) {
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
 		_pump1Pin = pump1Pin;
-		_pump1Power = pump1Power;
 	}
 
 	virtual DisplayHandler* button1Pressed() {
@@ -38,10 +37,11 @@ public:
 	}
 
 	virtual DisplayHandler* button2Pressed() {
+		int pump1Power = getWateringSettings(0).pumpPower;
 		switch (itemIndex) {
 		case 0:
 			pumpTestStart = millis();
-			analogWrite(_pump1Pin, _pump1Power);
+			analogWrite(_pump1Pin, pump1Power);
 			pumpTestRunning = true;
 			break;
 		case 1:
