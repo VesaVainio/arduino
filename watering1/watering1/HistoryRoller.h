@@ -2,6 +2,8 @@
 
 class HistoryRoller : public DisplayHandler {
 private:
+	int const delayOptions[3] = { 400, 800, 1600 };
+	int delayOptionIndex = 1;
 	MainMenu* _MainMenuLocal;
 	LiquidCrystal_I2C* _lcd;
 
@@ -14,7 +16,10 @@ public:
 	}
 
 	virtual DisplayHandler* button1Pressed() { return _MainMenuLocal; }
-	virtual DisplayHandler* button2Pressed() { return this; }
+	virtual DisplayHandler* button2Pressed() { 
+		delayOptionIndex = (delayOptionIndex + 1) % 3;
+		return this; 
+	}
 
 	virtual void activate() {
 		dispMode = 0;
@@ -23,7 +28,7 @@ public:
 
 	virtual void updateLcd() {
 		unsigned long currentMillis = millis();
-		if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 400)
+		if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + delayOptions[delayOptionIndex])
 		{
 			_lcd->clear();
 			_lcd->setCursor(0, 0);
