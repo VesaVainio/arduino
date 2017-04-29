@@ -187,7 +187,7 @@ void updateWatering() {
 	unsigned long currentMillis = millis();
 	word currentSoil = abs(measuringContext.getCurrentSoil());
 
-	if (currentSoil < 50) {
+	if (currentSoil < 20) {
 		// moisture reading abnormal
 		analogWrite(PUMP1_PIN, 0);
 		return;
@@ -288,10 +288,17 @@ word calculateTargetAmount(WateringSettings settings, byte series, word baseAmou
 	Serial.println("Moisture difference: " + String(moistureDifference));
 	// TODO make a setting
 	float moistureDifferencePart = (float)(moistureDifference) / 200.0 * baseAmount;
+	if (moistureDifferencePart > baseAmount * 0.5) {
+		moistureDifferencePart = baseAmount * 0.5;
+		Serial.println("Using moisture difference cutoff");
+	}
+
 	Serial.println("Moisture difference part: " + String(moistureDifferencePart));
+
 
 	// TODO make settings
 	float twelveHoursAvgTemp = getNHoursAvg(0, 12);
+	Serial.println("12h avg temp: " + String(twelveHoursAvgTemp));
 	float tempCoefficient = 0;
 	if (twelveHoursAvgTemp > 24.0) {
 		tempCoefficient = (twelveHoursAvgTemp - 24.0) * 0.1;

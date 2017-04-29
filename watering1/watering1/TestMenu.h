@@ -2,10 +2,11 @@
 
 #include <Arduino.h>
 #include "EepromInterface.h"
+#include "LeadTimeTestMenu.h"
 
 class TestMenu : public DisplayHandler {
 private:
-	const char* menuItems[2] = { "TEST PUMP ONCE", "EXIT" };
+	const char* menuItems[3] = { "TEST PUMP ONCE", "TEST LEAD TIME", "EXIT" };
 	int itemIndex = 0;
 	unsigned long pumpTestStart = 0;
 	bool pumpTestRunning = false;
@@ -13,6 +14,7 @@ private:
 	int _pump1Pin = 0;
 
 	DisplayHandler* _MainMenuLocal = 0;
+	DisplayHandler* _LeadTimeTestMenu = 0;
 	LiquidCrystal_I2C* _lcd;
 
 	void printMenuOnLcd() {
@@ -27,11 +29,12 @@ public:
 	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int pump1Pin) {
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
+		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, pump1Pin);
 		_pump1Pin = pump1Pin;
 	}
 
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 2;
+		itemIndex = (itemIndex + 1) % 3;
 		printMenuOnLcd();
 		return this;
 	}
@@ -45,6 +48,8 @@ public:
 			pumpTestRunning = true;
 			break;
 		case 1:
+			return _LeadTimeTestMenu;
+		case 2:
 			return _MainMenuLocal;
 		}
 		return this;

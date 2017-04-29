@@ -4,7 +4,7 @@
 
 class WateringSettingsMenu : public DisplayHandler {
 private:
-	char const* menuItems[8] = { "ENABLED", "MOIST LIMIT", "POT CM2", "GROWTH", "ADJUST %", "PUMP POWER", "HOUR", "EXIT" };
+	char const* menuItems[9] = { "ENABLED", "MOIST LIMIT", "POT CM2", "GROWTH", "ADJUST %", "PUMP POWER", "LEAD TIME", "HOUR", "EXIT" };
 	int itemIndex = 0;
 
 	DisplayHandler* _SettingsMenuLocal = 0;
@@ -39,6 +39,9 @@ private:
 			_lcd->print(getWateringSettings(wateringSeries).pumpPower);
 			break;
 		case 6:
+			_lcd->print(getWateringSettings(wateringSeries).leadTime);
+			break;
+		case 7:
 			_lcd->print(getWateringSettings(wateringSeries).startHour);
 			break;
 		}
@@ -51,7 +54,7 @@ public:
 	}
 
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 8;
+		itemIndex = (itemIndex + 1) % 9;
 		printMenuOnLcd();
 		return this;
 	}
@@ -79,9 +82,12 @@ public:
 			settings.pumpPower = increaseSetting(50, 150, 10, settings.pumpPower);
 			break;
 		case 6:
-			settings.startHour = increaseSetting(1, 24, 1, settings.startHour);
+			settings.leadTime = increaseSetting(50, 2000, 50, settings.leadTime);
 			break;
 		case 7:
+			settings.startHour = increaseSetting(1, 24, 1, settings.startHour);
+			break;
+		case 8:
 			return _SettingsMenuLocal;
 		}
 

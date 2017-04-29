@@ -43,6 +43,8 @@ struct WateringSettings // 8 bytes
 	byte adjustPercentage; // manual adjustment of watering amount, 100 = 100% = 1
 	byte pumpPower; // the pump power for PWM, doesn't affect amounts (adjusted for different pump types, lift height etc)
 	byte startHour;
+	word leadTime; // how long to run power at start of pumping phase
+	byte leadPower;
 	bool enabled;
 
 	WateringSettings() {
@@ -50,8 +52,10 @@ struct WateringSettings // 8 bytes
 		potSqCm = 75;
 		growthFactor = 0;
 		adjustPercentage = 100;
-		pumpPower = 80;
+		pumpPower = 60;
 		startHour = 19;
+		leadTime = 300;
+		leadPower = 255;
 		enabled = false;
 	}
 };
