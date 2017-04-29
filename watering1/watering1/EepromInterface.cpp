@@ -151,24 +151,24 @@ WateringStatus getWateringStatus() {
 
 void putWateringStatus(WateringStatus status) {
 	EEPROM.put(40, status);
-} // needs 13 bytes 
+} // needs 14 bytes 
 
 word getCumulativeRunningHour() {
 	word runningHour;
-	EEPROM.get(53, runningHour);
+	EEPROM.get(54, runningHour);
 	return runningHour;
 }
 
 void putCumulativeRunningHour(word runningHour) {
-	EEPROM.put(53, runningHour);
+	EEPROM.put(54, runningHour);
 }
 
 byte getHourOfDay() {
 	byte hourOfDay;
-	EEPROM.get(55, hourOfDay);
+	EEPROM.get(56, hourOfDay);
 	return hourOfDay;
 }
 
 void putHourOfDay(byte hourOfDay) {
-	EEPROM.put(55, hourOfDay);
+	EEPROM.put(56, hourOfDay);
 }

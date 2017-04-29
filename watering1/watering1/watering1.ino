@@ -207,14 +207,23 @@ void updateWatering() {
 			status.dose = dose;
 			putWateringStatus(status);
 			storeWateringRecord(baseAmount, totalAmount, currentSoil, 0);
-			Serial.println("Starting pump");
-			analogWrite(PUMP1_PIN, settings.pumpPower);
-			wateringMode = PumpRunning;
+			Serial.println("Starting pump, lead power " + settings.leadPower);
+			analogWrite(PUMP1_PIN, settings.leadPower);
+			wateringMode = PumpRunningLead;
 		}
 	}
-	else if (wateringMode == PumpRunning) {
+	else if (wateringMode == PumpRunningLead)
+	{
 		WateringStatus status = getWateringStatus();
-		if (currentMillis > status.previousCycleStartMillis + 500 + status.dose) {
+		if (currentMillis > status.previousCycleStartMillis + settings.leadTime) {
+			Serial.println("Setting pump power " + settings.pumpPower);
+			analogWrite(PUMP1_PIN, settings.pumpPower);
+			wateringMode = PumpRunningWatering;
+		}
+	}
+	else if (wateringMode == PumpRunningWatering) {
+		WateringStatus status = getWateringStatus();
+		if (currentMillis > status.previousCycleStartMillis + settings.leadTime + status.dose) {
 			analogWrite(PUMP1_PIN, 0);
 			status.usedAmount = status.usedAmount + (currentMillis - status.previousCycleStartMillis);
 			Serial.println("Pump stopped, usedAmount now " + String(status.usedAmount));
@@ -234,13 +243,14 @@ void updateWatering() {
 	else if (wateringMode == Interval) {
 		WateringStatus status = getWateringStatus();
 		if (currentMillis > status.previousCycleStartMillis + 35000) {
-			if (currentSoil > status.previousCycleMoisture + 10) {
+			if (currentSoil > status.previousCycleMoisture + 10 || status.phaseNumber > 0) { // only check previousCycleMoisture on 1st phase
 				status.previousCycleStartMillis = currentMillis;
 				status.previousCycleMoisture = currentSoil;
+				status.phaseNumber = status.phaseNumber + 1;
 				putWateringStatus(status);
 				Serial.println("Starting pump");
 				analogWrite(PUMP1_PIN, settings.pumpPower);
-				wateringMode = PumpRunning;
+				wateringMode = PumpRunningWatering;
 			}
 			else {
 				storeWateringResult(MoistureNotIncreased);
@@ -275,8 +285,8 @@ word getBaseAmount(WateringSettings settings, byte series) {
 		baseAmount = previousRecord.baseAmount;
 	}
 	else {
-		// TODO make the factor 120 a setting
-		baseAmount = settings.potSqCm * 80;
+		// TODO make the factor a setting
+		baseAmount = settings.potSqCm * 60;
 	}
 	return baseAmount;
 }
@@ -311,7 +321,10 @@ word calculateTargetAmount(WateringSettings settings, byte series, word baseAmou
 	Serial.println("Temperature part: " + String(tempPart));
 
 	word totalAmount = (word)(baseAmount + moistureDifferencePart + tempPart);
-	Serial.println("Total amount: " + String(totalAmount));
+	Serial.println("Total amount before adjust: " + String(totalAmount));
+
+	totalAmount = (word)(totalAmount * ((float)settings.adjustPercentage / 100.0));
+	Serial.println("Adjusted amount: " + String(totalAmount));
 
 	return totalAmount;
 }

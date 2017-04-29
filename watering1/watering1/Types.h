@@ -15,7 +15,8 @@ enum ErrorMode : byte {
 
 enum WateringMode : byte {
 	Idle,
-	PumpRunning,
+	PumpRunningLead,
+	PumpRunningWatering,
 	Interval
 };
 
@@ -61,12 +62,13 @@ struct WateringSettings // 8 bytes
 };
 
 // needed only once, as only 1 watering can be in process at once
-struct WateringStatus // 11 bytes
+struct WateringStatus // 14 bytes
 {
 	byte wateringSeriesIndex; // points to the series, 0 or 1
 	word targetAmount;
 	word usedAmount;
 	word dose;
+	byte phaseNumber;
 	word previousCycleMoisture;
 	unsigned long previousCycleStartMillis;
 
@@ -76,5 +78,6 @@ struct WateringStatus // 11 bytes
 		usedAmount = 0;
 		previousCycleMoisture = 0;
 		previousCycleStartMillis = 0;
+		phaseNumber = 0;
 	}
 };
