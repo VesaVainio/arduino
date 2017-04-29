@@ -84,6 +84,7 @@
     <ClInclude Include="EepromInterface.h" />
     <ClInclude Include="HistoryRoller.h" />
     <ClInclude Include="InfoRoller.h" />
+    <ClInclude Include="LeadTimeTestMenu.h" />
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MeasuringContext.h" />
     <ClInclude Include="ResetMenu.h" />
