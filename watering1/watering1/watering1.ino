@@ -135,14 +135,14 @@ void updateButtonsWithDebounce()
 
 		if (button1State == LOW && button1NewState == HIGH)
 		{
-			Serial.println("Button 1 pressed");
+			Serial.println("1 pressed");
 			newCurrentHandler = currentHandler->button1Pressed();
 			buttonPressed = true;
 		}
 
 		if (button2State == LOW && button2NewState == HIGH)
 		{
-			Serial.println("Button 2 pressed");
+			Serial.println("2 pressed");
 			newCurrentHandler = currentHandler->button2Pressed();
 			buttonPressed = true;
 		}
@@ -207,7 +207,7 @@ void updateWatering() {
 			status.dose = dose;
 			putWateringStatus(status);
 			storeWateringRecord(baseAmount, totalAmount, currentSoil, 0);
-			Serial.println("Starting pump, lead power " + settings.leadPower);
+			Serial.println("Starting pump, lead power " + String(settings.leadPower));
 			analogWrite(PUMP1_PIN, settings.leadPower);
 			wateringMode = PumpRunningLead;
 		}
@@ -216,7 +216,7 @@ void updateWatering() {
 	{
 		WateringStatus status = getWateringStatus();
 		if (currentMillis > status.previousCycleStartMillis + settings.leadTime) {
-			Serial.println("Setting pump power " + settings.pumpPower);
+			Serial.println("Setting pump power " + String(settings.pumpPower));
 			analogWrite(PUMP1_PIN, settings.pumpPower);
 			wateringMode = PumpRunningWatering;
 		}
@@ -225,24 +225,25 @@ void updateWatering() {
 		WateringStatus status = getWateringStatus();
 		if (currentMillis > status.previousCycleStartMillis + settings.leadTime + status.dose) {
 			analogWrite(PUMP1_PIN, 0);
-			status.usedAmount = status.usedAmount + (currentMillis - status.previousCycleStartMillis);
-			Serial.println("Pump stopped, usedAmount now " + String(status.usedAmount));
+			status.usedAmount = status.usedAmount + (currentMillis - status.previousCycleStartMillis - settings.leadTime);
+			Serial.println("Pump stopped, usedAmount " + String(status.usedAmount));
 			status.previousCycleStartMillis = currentMillis;
 			putWateringStatus(status);
 			if (status.usedAmount >= status.targetAmount) {
 				wateringMode = Idle;
 				storeWateringResult(Success);
-				Serial.println("Watering mode Idle");
+				Serial.println("Wmode Idle");
 			}
 			else {
 				wateringMode = Interval;
-				Serial.println("Watering mode Interval");
+				Serial.println("Wmode Interval");
 			}
 		}
 	}
 	else if (wateringMode == Interval) {
 		WateringStatus status = getWateringStatus();
 		if (currentMillis > status.previousCycleStartMillis + 35000) {
+			Serial.println("Interval elapsed, moisture " + String(currentSoil));
 			if (currentSoil > status.previousCycleMoisture + 10 || status.phaseNumber > 0) { // only check previousCycleMoisture on 1st phase
 				status.previousCycleStartMillis = currentMillis;
 				status.previousCycleMoisture = currentSoil;
@@ -253,6 +254,7 @@ void updateWatering() {
 				wateringMode = PumpRunningWatering;
 			}
 			else {
+				Serial.println("Moisture not increased, Wmode Idle");
 				storeWateringResult(MoistureNotIncreased);
 				wateringMode = Idle;
 			}
@@ -292,18 +294,18 @@ word getBaseAmount(WateringSettings settings, byte series) {
 }
 
 word calculateTargetAmount(WateringSettings settings, byte series, word baseAmount) {
-	Serial.println("Base amount: " + String(baseAmount));
+	Serial.println("Base: " + String(baseAmount));
 
 	int moistureDifference = settings.moistureLimit - measuringContext.getCurrentSoil();
-	Serial.println("Moisture difference: " + String(moistureDifference));
+	Serial.println("Mdiff: " + String(moistureDifference));
 	// TODO make a setting
 	float moistureDifferencePart = (float)(moistureDifference) / 200.0 * baseAmount;
 	if (moistureDifferencePart > baseAmount * 0.5) {
 		moistureDifferencePart = baseAmount * 0.5;
-		Serial.println("Using moisture difference cutoff");
+		Serial.println("Mdiff cutoff");
 	}
 
-	Serial.println("Moisture difference part: " + String(moistureDifferencePart));
+	Serial.println("Mdiff part: " + String(moistureDifferencePart));
 
 
 	// TODO make settings
@@ -316,15 +318,15 @@ word calculateTargetAmount(WateringSettings settings, byte series, word baseAmou
 	else if (twelveHoursAvgTemp < 15.0) {
 		tempCoefficient = (twelveHoursAvgTemp - 15.0) * 0.05;
 	}
-	Serial.println("Temperature coefficient: " + String(tempCoefficient));
+	Serial.println("Temp coeff: " + String(tempCoefficient));
 	float tempPart = baseAmount * tempCoefficient;
-	Serial.println("Temperature part: " + String(tempPart));
+	Serial.println("Temp part: " + String(tempPart));
 
 	word totalAmount = (word)(baseAmount + moistureDifferencePart + tempPart);
-	Serial.println("Total amount before adjust: " + String(totalAmount));
+	Serial.println("W/o adj: " + String(totalAmount));
 
 	totalAmount = (word)(totalAmount * ((float)settings.adjustPercentage / 100.0));
-	Serial.println("Adjusted amount: " + String(totalAmount));
+	Serial.println("Adj amount: " + String(totalAmount));
 
 	return totalAmount;
 }
@@ -332,12 +334,14 @@ word calculateTargetAmount(WateringSettings settings, byte series, word baseAmou
 void setup()
 {
 	Serial.begin(9600);
-	Serial.println("Starting setup");
+	Serial.println("Setup");
 
 	lcd.begin(16, 2);
 
 	pinMode(MOISTURE_PIN1, OUTPUT);
 	pinMode(MOISTURE_PIN2, OUTPUT);
+
+	pinMode(PUMP1_PIN, OUTPUT);
 
 	pinMode(BUTTON1_PIN, INPUT);
 	pinMode(BUTTON2_PIN, INPUT);
@@ -365,7 +369,7 @@ void setup()
 	//	wateringMode = Interval;
 	//}
 
-	Serial.println("setup finished");
+	Serial.println("Done");
 }
 
 void loop()
