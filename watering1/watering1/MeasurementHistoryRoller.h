@@ -1,21 +1,21 @@
 #pragma once
 
-class HistoryRoller : public DisplayHandler {
+class MeasurementHistoryRoller : public DisplayHandler {
 private:
 	int const delayOptions[3] = { 400, 800, 1600 };
 	int delayOptionIndex = 1;
-	MainMenu* _MainMenuLocal;
+	DisplayHandler* _ParentMenu;
 	LiquidCrystal_I2C* _lcd;
 
 	byte dispMode;
 	unsigned long lcdUpdatedMillis;
 public:
-	HistoryRoller(LiquidCrystal_I2C* lcd, MainMenu* mainMenu) {
+	MeasurementHistoryRoller(LiquidCrystal_I2C* lcd, DisplayHandler* parentMenu) {
 		_lcd = lcd;
-		_MainMenuLocal = mainMenu;
+		_ParentMenu = parentMenu;
 	}
 
-	virtual DisplayHandler* button1Pressed() { return _MainMenuLocal; }
+	virtual DisplayHandler* button1Pressed() { return _ParentMenu; }
 	virtual DisplayHandler* button2Pressed() { 
 		delayOptionIndex = (delayOptionIndex + 1) % 3;
 		return this; 

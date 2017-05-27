@@ -1,3 +1,4 @@
+#include <RTClib.h>
 #include <LiquidCrystal_I2C.h>
 #include <dht.h>
 
@@ -8,22 +9,23 @@
 #include "DisplayHandler.h"
 #include "MainMenu.h"
 #include "InfoRoller.h"
-#include "HistoryRoller.h"
+#include "HistoryMenu.h"
 #include "SettingsMenu.h"
 #include "TestMenu.h"
 
-#define DHT11_PIN 2
+#define DHT11_PIN 4
 
-#define MOISTURE_PIN1 4
-#define MOISTURE_PIN2 5
+#define MOISTURE_PIN1 24
+#define MOISTURE_PIN2 25
 
-#define BUTTON1_PIN 13
-#define BUTTON2_PIN 12
+#define BUTTON1_PIN 29
+#define BUTTON2_PIN 28
 
-#define PUMP1_PIN 11
+#define PUMP1_PIN 2
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 dht DHT;
+RTC_DS3231 rtc;
 
 ErrorMode errorMode = Ok;
 
@@ -50,7 +52,8 @@ void setErrorMode(ErrorMode newMode)
 		{
 			case DhtError:
 				lcd.setCursor(0, 0);
-				lcd.print("DHT11 ERROR");
+				lcd.print("DHT11 ERROR " + String(newMode));
+				delay(50);
 				break;
 			default:
 				break;
@@ -109,9 +112,9 @@ void doSampling()
 }
 
 MainMenu* _MainMenu = new MainMenu();
-InfoRoller* _InfoRoller = new InfoRoller(&lcd, &measuringContext, _MainMenu);
-HistoryRoller* _HistoryRoller = new HistoryRoller(&lcd, _MainMenu);
-SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu);
+InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, &measuringContext, _MainMenu);
+HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu);
+SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc);
 TestMenu* _Test = new TestMenu(&lcd, _MainMenu, PUMP1_PIN);
 
 DisplayHandler* currentHandler;
@@ -267,7 +270,7 @@ void storeWateringRecord(word baseAmount, word totalAmount, word moistureAtStart
 	newRecord.baseAmount = baseAmount;
 	newRecord.totalAmount = totalAmount;
 	newRecord.moistureAtStart = measuringContext.getCurrentSoil();
-	// TODO set hour for newRecord
+	newRecord.time = rtc.now().unixtime();
 	int index = (getWateringRecordIndex(series) + 1) % wateringSeriesItems;
 	putWateringRecord(series, index, newRecord);
 	putWateringRecordIndex(series, index);
@@ -294,18 +297,18 @@ word getBaseAmount(WateringSettings settings, byte series) {
 }
 
 word calculateTargetAmount(WateringSettings settings, byte series, word baseAmount) {
-	Serial.println("Base: " + String(baseAmount));
+	Serial.println("Base amount: " + String(baseAmount));
 
 	int moistureDifference = settings.moistureLimit - measuringContext.getCurrentSoil();
-	Serial.println("Mdiff: " + String(moistureDifference));
+	Serial.println("Moist diff: " + String(moistureDifference));
 	// TODO make a setting
 	float moistureDifferencePart = (float)(moistureDifference) / 200.0 * baseAmount;
 	if (moistureDifferencePart > baseAmount * 0.5) {
 		moistureDifferencePart = baseAmount * 0.5;
-		Serial.println("Mdiff cutoff");
+		Serial.println("Moist diff cutoff");
 	}
 
-	Serial.println("Mdiff part: " + String(moistureDifferencePart));
+	Serial.println("Moist diff part: " + String(moistureDifferencePart));
 
 
 	// TODO make settings
@@ -323,7 +326,7 @@ word calculateTargetAmount(WateringSettings settings, byte series, word baseAmou
 	Serial.println("Temp part: " + String(tempPart));
 
 	word totalAmount = (word)(baseAmount + moistureDifferencePart + tempPart);
-	Serial.println("W/o adj: " + String(totalAmount));
+	Serial.println("Total w/o adj: " + String(totalAmount));
 
 	totalAmount = (word)(totalAmount * ((float)settings.adjustPercentage / 100.0));
 	Serial.println("Adj amount: " + String(totalAmount));
@@ -337,6 +340,14 @@ void setup()
 	Serial.println("Setup");
 
 	lcd.begin(16, 2);
+
+	if (rtc.lostPower()) {
+		Serial.println("RTC has lost power, initializing");
+		// following line sets the RTC to the date & time this sketch was compiled
+		rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+	}
+
+	rtc.begin();
 
 	pinMode(MOISTURE_PIN1, OUTPUT);
 	pinMode(MOISTURE_PIN2, OUTPUT);
@@ -361,7 +372,7 @@ void setup()
 
 	measuringContext.moistureInterval = 15000;
 
-	_MainMenu->Init(&lcd, _InfoRoller, _HistoryRoller, _Settings, _Test);
+	_MainMenu->Init(&lcd, _InfoRoller, _HistoryMenu, _Settings, _Test);
 	currentHandler = _InfoRoller;
 
 	//WateringStatus status = getWateringStatus();

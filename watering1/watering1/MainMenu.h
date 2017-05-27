@@ -1,16 +1,12 @@
 #pragma once
 
-class HistoryRoller;
-class InfoRoller;
-class SettingsMenu;
-
 class MainMenu : public DisplayHandler {
 private:
-	char const* menuItems[4] = { "SHOW HISTORY", "SETTINGS", "TEST", "EXIT" };
+	char const* menuItems[4] = { "HISTORY", "SETTINGS", "TEST", "EXIT" };
 	int itemIndex = 0;
 
 	DisplayHandler* _InfoRollerLocal = 0;
-	DisplayHandler* _HistoryRollerLocal = 0;
+	DisplayHandler* _HistoryMenuLocal = 0;
 	DisplayHandler* _SettingsLocal = 0;
 	DisplayHandler* _TestLocal = 0;
 
@@ -34,7 +30,7 @@ public:
 	virtual DisplayHandler* button2Pressed() {
 		switch (itemIndex) {
 		case 0:
-			return _HistoryRollerLocal;
+			return _HistoryMenuLocal;
 		case 1:
 			return _SettingsLocal;
 		case 2:
@@ -52,10 +48,10 @@ public:
 
 	virtual void updateLcd() { };
 
-	void Init(LiquidCrystal_I2C* lcd, DisplayHandler* infoRoller, DisplayHandler* historyRoller, DisplayHandler* settings, DisplayHandler* test) {
+	void Init(LiquidCrystal_I2C* lcd, DisplayHandler* infoRoller, DisplayHandler* historyMenu, DisplayHandler* settings, DisplayHandler* test) {
 		_lcd = lcd;
 		_InfoRollerLocal = infoRoller;
-		_HistoryRollerLocal = historyRoller;
+		_HistoryMenuLocal = historyMenu;
 		_SettingsLocal = settings;
 		_TestLocal = test;
 	}

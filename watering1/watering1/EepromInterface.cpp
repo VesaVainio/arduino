@@ -2,7 +2,6 @@
 #include "Types.h"
 #include <EEPROM.h>
 
-
 const int startOfMinuteSamples = 60; // 24 bytes for misc variables
 const int oneMinuteSeriesBytes = minuteSeriesItems * sizeof(float);
 
@@ -16,7 +15,7 @@ const int startOfWateringRecords = startOfHourSamples + seriesCount * oneHourSer
 const int oneWateringRecordSeriesBytes = wateringSeriesItems * sizeof(WateringRecord);
 
 void clearAllSamples() {
-	for (int i = startOfMinuteSamples; i < 1024; i++) {
+	for (int i = startOfMinuteSamples; i < 4096; i++) {
 		EEPROM.put(i, 0);
 	}
 }
@@ -125,6 +124,10 @@ BacklightMode getBacklightMode()
 {
 	BacklightMode mode;
 	EEPROM.get(9, mode);
+	if (mode < 0 || mode > 2) {
+		return On;
+	}
+
 	return mode;
 }
 
@@ -152,23 +155,3 @@ WateringStatus getWateringStatus() {
 void putWateringStatus(WateringStatus status) {
 	EEPROM.put(40, status);
 } // needs 14 bytes 
-
-word getCumulativeRunningHour() {
-	word runningHour;
-	EEPROM.get(54, runningHour);
-	return runningHour;
-}
-
-void putCumulativeRunningHour(word runningHour) {
-	EEPROM.put(54, runningHour);
-}
-
-byte getHourOfDay() {
-	byte hourOfDay;
-	EEPROM.get(56, hourOfDay);
-	return hourOfDay;
-}
-
-void putHourOfDay(byte hourOfDay) {
-	EEPROM.put(56, hourOfDay);
-}

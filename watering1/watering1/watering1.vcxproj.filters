@@ -39,9 +39,6 @@
     <ClInclude Include="MeasuringContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HistoryRoller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SettingsMenu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -54,12 +51,24 @@
     <ClInclude Include="ResetMenu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LeadTimeTestMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DateTimeSettingsMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HistoryMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeasurementHistoryRoller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WateringHistoryRoller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EepromInterface.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Types.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MeasuringContext.cpp">

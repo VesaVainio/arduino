@@ -79,7 +79,7 @@ public:
 			settings.adjustPercentage = increaseSetting(25, 200, 5, settings.adjustPercentage);
 			break;
 		case 5:
-			settings.pumpPower = increaseSetting(50, 150, 10, settings.pumpPower);
+			settings.pumpPower = increaseSetting(50, 250, 10, settings.pumpPower);
 			break;
 		case 6:
 			settings.leadTime = increaseSetting(50, 2000, 50, settings.leadTime);

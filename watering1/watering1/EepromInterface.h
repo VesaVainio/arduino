@@ -38,9 +38,3 @@ void putWateringSettings(int index, WateringSettings settings);
 
 WateringStatus getWateringStatus();
 void putWateringStatus(WateringStatus status);
-
-word getCumulativeRunningHour();
-void putCumulativeRunningHour(word runningHour);
-
-byte getHourOfDay();
-void putHourOfDay(byte hourOfDay);

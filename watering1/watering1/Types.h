@@ -26,9 +26,9 @@ enum WateringResult : byte {
 };
 
 // store N (e.g 10 pcs) of these per plant
-struct WateringRecord // 8 bytes
+struct WateringRecord // 10 bytes
 {
-	word hour; // cumulative running hours
+	long time; // unix time
 	word moistureAtStart;
 	word baseAmount; // base amount, not considering temp adjustment or adjustPercentage
 	word totalAmount; // actual amount
@@ -36,7 +36,7 @@ struct WateringRecord // 8 bytes
 };
 
 // settings set by user, one record for each pot/pump
-struct WateringSettings // 8 bytes
+struct WateringSettings // 12 bytes
 {
 	word moistureLimit; // moisture limit for starting watering
 	word potSqCm; // cm^2 of the pot, used to calculate the initial baseAmount

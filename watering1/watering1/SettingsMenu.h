@@ -3,15 +3,17 @@
 #include "EepromInterface.h"
 #include "WateringSettingsMenu.h"
 #include "ResetMenu.h"
+#include "DateTimeSettingsMenu.h"
 
 class SettingsMenu : public DisplayHandler {
 private:
-	char const* menuItems[5] = { "BACKLIGHT", "HOUR OF DAY", "PLANT 1", "RESET ALL", "EXIT" };
+	char const* menuItems[6] = { "BACKLIGHT", "PLANT 1", "DATE & TIME", "RESET ALL", "EXIT" };
 	char const* backlightOptions[3] = { "OFF", "AUTO", "ON" };
 	int itemIndex = 0;
 
 	DisplayHandler* _MainMenuLocal = 0;
 	DisplayHandler* _WateringSettingsMenu = 0;
+	DisplayHandler* _DateTimeSettingsMenu = 0;
 	DisplayHandler* _ResetMenu = 0;
 	LiquidCrystal_I2C* _lcd;
 
@@ -26,17 +28,15 @@ private:
 		case 0:
 			_lcd->print(backlightOptions[getBacklightMode()]);
 			break;
-		case 1:
-			_lcd->print(getHourOfDay());
-			break;
 		}
 	};
 
 public:
-	SettingsMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu) {
+	SettingsMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, RTC_DS3231* rtc) {
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
 		_WateringSettingsMenu = new WateringSettingsMenu(lcd, this);
+		_DateTimeSettingsMenu = new DateTimeSettingsMenu(lcd, this, rtc);
 		_ResetMenu = new ResetMenu(lcd, this);
 	}
 
@@ -48,7 +48,6 @@ public:
 
 	virtual DisplayHandler* button2Pressed() {
 		BacklightMode backlightMode = getBacklightMode(); // cannot initialize inside switch
-		byte hourOfDay = getHourOfDay();
 
 		switch (itemIndex) {
 			case 0:
@@ -56,10 +55,9 @@ public:
 				putBacklightMode(backlightMode);
 				break;
 			case 1:
-				putHourOfDay(increaseSetting(1, 24, 1, hourOfDay));
-				break;
-			case 2:
 				return _WateringSettingsMenu;
+			case 2: 
+				return _DateTimeSettingsMenu;
 			case 3:
 				return _ResetMenu;
 			case 4:

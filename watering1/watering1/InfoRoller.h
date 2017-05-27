@@ -1,10 +1,12 @@
 #pragma once
 
 #include "EepromInterface.h"
+#include <RTClib.h>
 
 class InfoRoller : public DisplayHandler {
 private:
 	LiquidCrystal_I2C* _lcd;
+	RTC_DS3231* _rtc;
 	MeasuringContext* _measuringContext;
 	MainMenu* _MainMenu;
 
@@ -19,8 +21,9 @@ private:
 	unsigned long lcdUpdatedMillis;
 
 public:
-	InfoRoller(LiquidCrystal_I2C* lcd, MeasuringContext* measuringContext, MainMenu* mainMenu) {
+	InfoRoller(LiquidCrystal_I2C* lcd, RTC_DS3231* rtc, MeasuringContext* measuringContext, MainMenu* mainMenu) {
 		_lcd = lcd;
+		_rtc = rtc;
 		_measuringContext = measuringContext;
 		_MainMenu = mainMenu;
 		mode = Current;
@@ -66,9 +69,11 @@ public:
 			else if (mode == Hours6)
 			{
 				mode = Stats;
+				DateTime now = _rtc->now();
+				DateTime testTime = DateTime(now.unixtime());
 				_lcd->print("run " + String(currentMillis / (1000 * 60ul * 60ul)) + "h " + String((currentMillis % (1000 * 60ul * 60ul)) / (1000 * 60ul)) + "min");
 				_lcd->setCursor(0, 1);
-				_lcd->print(String(currentMillis));
+				_lcd->print(String(testTime.hour()) + ":" + String(testTime.minute()) + ":" + String(testTime.second()));
 			}
 
 			lcdUpdatedMillis = currentMillis;
