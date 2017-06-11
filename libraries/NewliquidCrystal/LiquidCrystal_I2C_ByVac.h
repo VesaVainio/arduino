@@ -33,7 +33,7 @@
 #if (ARDUINO < 10000)
    #include <../Wire/Wire.h>
 #else
-   #include <Wire.h>
+   #include <../Wire/Wire.h>
 #endif
 #include "LCD.h"
 

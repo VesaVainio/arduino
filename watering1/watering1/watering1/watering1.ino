@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include <RTClib.h>
 #include <LiquidCrystal_I2C.h>
 #include <dht.h>
