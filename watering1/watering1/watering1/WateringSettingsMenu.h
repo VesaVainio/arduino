@@ -22,7 +22,7 @@ private:
 		switch (itemIndex) {
 		case 0:
 			_lcd->print(getWateringSettings(wateringSeries).enabled);
-			break; 
+			break;
 		case 1:
 			_lcd->print(getWateringSettings(wateringSeries).moistureLimit);
 			break;
@@ -101,4 +101,8 @@ public:
 	};
 
 	virtual void updateLcd() {};
+
+	void setWateringSeries(int seriesIndex) {
+		wateringSeries = seriesIndex;
+	}
 };

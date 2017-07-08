@@ -19,13 +19,16 @@
 
 #define MOISTURE_PIN1 24
 #define MOISTURE_PIN2 25
+int const MOISTURE_PINS[] = { 24, 25 };
 
 #define BUTTON1_PIN 29
 #define BUTTON2_PIN 28
+#define BUTTON3_PIN 30
 
 #define PUMP1_PIN 2
+int const PUMP_PINS[] = { 2, 6 };
 
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
+LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 dht DHT;
 RTC_DS3231 rtc;
 
@@ -40,6 +43,7 @@ unsigned long buttonUpdatedMillis = 0;
 
 int button1State = LOW;
 int button2State = LOW;
+int button3State = LOW;
 bool buttonStateChanging = false;
 
 MeasuringContext measuringContext;
@@ -116,7 +120,7 @@ void doSampling()
 MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, &measuringContext, _MainMenu);
 HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu);
-SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc);
+SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, 2);
 TestMenu* _Test = new TestMenu(&lcd, _MainMenu, PUMP1_PIN);
 
 DisplayHandler* currentHandler;
