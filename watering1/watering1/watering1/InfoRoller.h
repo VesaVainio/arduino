@@ -50,7 +50,9 @@ public:
 				mode = Current;
 				_lcd->print("tmp  " + String(_measuringContext->getCurrentTemperature()) + " hmd " + String(_measuringContext->getCurrentAirHumidity()));
 				_lcd->setCursor(0, 1);
-				_lcd->print("soil " + String(_measuringContext->getCurrentSoil()));
+				_lcd->print("soil1 " + String(_measuringContext->getCurrentSoil(0)));
+				_lcd->setCursor(10, 1);
+				_lcd->print("soil2 " + String(_measuringContext->getCurrentSoil(1)));
 			}
 			else if (mode == Current)
 			{
@@ -58,6 +60,8 @@ public:
 				_lcd->print("1h " + String(getNHoursAvg(0, 1), 1) + " " + String(getNHoursAvg(1, 1), 1));
 				_lcd->setCursor(0, 1);
 				_lcd->print("   " + String(getNHoursAvg(2, 1), 1) + "  ");
+				_lcd->setCursor(10, 1);
+				_lcd->print(String(getNHoursAvg(3, 1), 1) + "  ");
 			}
 			else if (mode == Hours1)
 			{
@@ -65,6 +69,8 @@ public:
 				_lcd->print("6h " + String(getNHoursAvg(0, 6), 1) + " " + String(getNHoursAvg(1, 6), 1));
 				_lcd->setCursor(0, 1);
 				_lcd->print("   " + String(getNHoursAvg(2, 6), 1));
+				_lcd->setCursor(10, 1);
+				_lcd->print(String(getNHoursAvg(3, 6), 1) + "  ");
 			}
 			else if (mode == Hours6)
 			{
@@ -80,4 +86,3 @@ public:
 		}
 	};
 };
-

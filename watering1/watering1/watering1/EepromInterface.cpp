@@ -2,7 +2,7 @@
 #include "Types.h"
 #include <EEPROM.h>
 
-const int startOfMinuteSamples = 60; // 24 bytes for misc variables
+const int startOfMinuteSamples = 200;
 const int oneMinuteSeriesBytes = minuteSeriesItems * sizeof(float);
 
 const int startOfHourSamples = startOfMinuteSamples + seriesCount * oneMinuteSeriesBytes;
@@ -13,6 +13,9 @@ const int wateringSeriesInUse = 1;
 
 const int startOfWateringRecords = startOfHourSamples + seriesCount * oneHourSeriesBytes;
 const int oneWateringRecordSeriesBytes = wateringSeriesItems * sizeof(WateringRecord);
+
+const int startOfWateringSettings = 10;
+const int startOfWateringStatus = 100;
 
 void clearAllSamples() {
 	for (int i = startOfMinuteSamples; i < 4096; i++) {
@@ -138,20 +141,20 @@ void putBacklightMode(BacklightMode backlightMode)
 
 WateringSettings getWateringSettings(int index) {
 	WateringSettings settings;
-	EEPROM.get(10 + index * 10, settings);
+	EEPROM.get(startOfWateringSettings + index * sizeof(WateringSettings), settings);
 	return settings;
 }
 
 void putWateringSettings(int index, WateringSettings settings) {
-	EEPROM.put(10 + index * 10, settings);
+	EEPROM.put(startOfWateringSettings + index * sizeof(WateringSettings), settings);
 } // needs 3 * 9 bytes (3 * 1 bytes to spare) = 30 bytes
 
-WateringStatus getWateringStatus() {
+WateringStatus getWateringStatus(int index) {
 	WateringStatus status;
-	EEPROM.get(40, status);
+	EEPROM.get(startOfWateringStatus + index * sizeof(WateringStatus), status);
 	return status;
 }
 
-void putWateringStatus(WateringStatus status) {
-	EEPROM.put(40, status);
-} // needs 14 bytes 
+void putWateringStatus(int index, WateringStatus status) {
+	EEPROM.put(startOfWateringStatus + index * sizeof(WateringStatus), status);
+} // needs 14 bytes

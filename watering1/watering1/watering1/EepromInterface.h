@@ -3,8 +3,8 @@
 #include "Types.h"
 #include "Arduino.h"
 
-const int seriesCount = 4;
-const int seriesInUse = 3;
+const int seriesCount = 10;
+const int seriesInUse = 4;
 const int minuteSeriesItems = 6;
 const int wateringSeriesItems = 10;
 
@@ -36,5 +36,5 @@ void putBacklightMode(BacklightMode backlightMode);
 WateringSettings getWateringSettings(int index);
 void putWateringSettings(int index, WateringSettings settings);
 
-WateringStatus getWateringStatus();
-void putWateringStatus(WateringStatus status);
+WateringStatus getWateringStatus(int index);
+void putWateringStatus(int index, WateringStatus status);

@@ -19,14 +19,20 @@
 
 #define MOISTURE_PIN1 24
 #define MOISTURE_PIN2 25
-int const MOISTURE_PINS[] = { 24, 25 };
 
 #define BUTTON1_PIN 29
 #define BUTTON2_PIN 28
 #define BUTTON3_PIN 30
 
-#define PUMP1_PIN 2
-int const PUMP_PINS[] = { 2, 6 };
+int const wateringCount = 4;
+WateringMode wateringModes[] = { Idle, Idle, Idle, Idle };
+
+WateringPins const wateringPins[] = {
+		{ 24, 25, 2, 2 },
+		{ 0, 0, 6, 6 },
+		{ 0, 0, 0, 0 },
+		{ 0, 0, 0, 0 }
+};
 
 LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 dht DHT;
@@ -46,9 +52,7 @@ int button2State = LOW;
 int button3State = LOW;
 bool buttonStateChanging = false;
 
-MeasuringContext measuringContext;
-
-byte wateringMode = Idle;
+MeasuringContext measuringContext = new MeasuringContext(wateringCount);
 
 void setErrorMode(ErrorMode newMode)
 {
@@ -82,7 +86,10 @@ void doSampling()
 	nextMinuteSampleMillis += 300000ul;
 	putMinuteSample(0, minuteIndex, (float)measuringContext.getCurrentTemperature());
 	putMinuteSample(1, minuteIndex, (float)measuringContext.getCurrentAirHumidity());
-	putMinuteSample(2, minuteIndex, (float)measuringContext.getCurrentSoil());
+	for (int i=0; i<wateringCount; i++) {
+		putMinuteSample(2 + i, minuteIndex, (float)measuringContext.getCurrentSoil(i));
+	}
+
 	minuteIndex++;
 
 	if (minuteIndex == minuteSeriesItems)
@@ -121,7 +128,7 @@ MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, &measuringContext, _MainMenu);
 HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu);
 SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, 2);
-TestMenu* _Test = new TestMenu(&lcd, _MainMenu, PUMP1_PIN);
+TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringPins[0].pumpPwmPin);
 
 DisplayHandler* currentHandler;
 
@@ -129,9 +136,11 @@ void updateButtonsWithDebounce()
 {
 	int button1NewState = digitalRead(BUTTON1_PIN);
 	int button2NewState = digitalRead(BUTTON2_PIN);
+	int button3NewState = digitalRead(BUTTON3_PIN);
 
 	unsigned long currentMillis = millis();
-	if (buttonStateChanging == false && (button1NewState != button1State || button2NewState != button2State))
+	if (buttonStateChanging == false && (button1NewState != button1State || button2NewState != button2State ||
+			button3NewState != button3State))
 	{
 		buttonUpdatedMillis = currentMillis;
 		buttonStateChanging = true;
@@ -156,6 +165,13 @@ void updateButtonsWithDebounce()
 			buttonPressed = true;
 		}
 
+		if (button3State == LOW && button3NewState == HIGH)
+		{
+			Serial.println("3 pressed");
+			newCurrentHandler = currentHandler->button3Pressed();
+			buttonPressed = true;
+		}
+
 		if (buttonPressed == true && oldCurrentHandler != newCurrentHandler) {
 			currentHandler = newCurrentHandler;
 			currentHandler->activate();
@@ -163,6 +179,7 @@ void updateButtonsWithDebounce()
 
 		button1State = button1NewState;
 		button2State = button2NewState;
+		button3State = button3NewState;
 		buttonStateChanging = false;
 	}
 }
@@ -192,90 +209,142 @@ void updateBacklight() {
 }
 
 void updateWatering() {
-	WateringSettings settings = getWateringSettings(0);
+	bool pumpRunning = false;
+	for (int i=0; i<wateringCount; i++) {
+		WateringSettings settings = getWateringSettings(i);
+		if (settings.enabled) {
+			bool currentPumpRunning = updateWateringForPump(i, settings, pumpRunning);
+			if (currentPumpRunning) {
+				pumpRunning = true;
+			}
+		}
+	}
+}
+
+void startPump(int index, int power) {
+	if (wateringPins[index].pumpEnablePin != wateringPins[index].pumpPwmPin) {
+		digitalWrite(wateringPins[index].pumpEnablePin, HIGH);
+	}
+
+	analogWrite(wateringPins[index].pumpPwmPin, power);
+}
+
+void stopPump(int index) {
+	if (wateringPins[index].pumpEnablePin != wateringPins[index].pumpPwmPin) {
+		digitalWrite(wateringPins[index].pumpEnablePin, LOW);
+	}
+
+	analogWrite(wateringPins[index].pumpPwmPin, 0);
+}
+
+bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunning) {
 	unsigned long currentMillis = millis();
-	word currentSoil = abs(measuringContext.getCurrentSoil());
+	word currentSoil = abs(measuringContext.getCurrentSoil(index));
 
 	if (currentSoil < 20) {
 		// moisture reading abnormal
-		analogWrite(PUMP1_PIN, 0);
-		return;
+		stopPump(index);
+		return false;
 	}
 
-	if (wateringMode == Idle) {
-		if (settings.enabled && currentSoil < settings.moistureLimit) {
+	if (wateringModes[index] == Idle) {
+		DateTime now = rtc.now();
+		if (!pumpRunning && shouldStartWatering(index, settings, currentSoil, now)) {
 			WateringStatus status;
-			status.wateringSeriesIndex = 0;
-			word baseAmount = getBaseAmount(settings, 0);
-			word totalAmount = calculateTargetAmount(settings, 0, baseAmount);
+			word baseAmount = getBaseAmount(settings, index);
+			word totalAmount = calculateTargetAmount(settings, index, baseAmount);
 			word dose = totalAmount / 3;
 			totalAmount = dose * 3;
 			status.targetAmount = totalAmount;
 			status.previousCycleMoisture = currentSoil;
 			status.previousCycleStartMillis = currentMillis;
 			status.dose = dose;
-			putWateringStatus(status);
-			storeWateringRecord(baseAmount, totalAmount, currentSoil, 0);
-			Serial.println("Starting pump, lead power " + String(settings.leadPower));
-			analogWrite(PUMP1_PIN, settings.leadPower);
-			wateringMode = PumpRunningLead;
+			putWateringStatus(index, status);
+			storeWateringRecord(baseAmount, totalAmount, currentSoil, index);
+			Serial.println("Starting pump " + String(index + 1) + ", lead power " + String(settings.leadPower));
+			wateringModes[index] = PumpRunningLead;
+			startPump(index, settings.leadPower);
+			return true;
 		}
 	}
-	else if (wateringMode == PumpRunningLead)
+	else if (wateringModes[index] == PumpRunningLead)
 	{
-		WateringStatus status = getWateringStatus();
+		WateringStatus status = getWateringStatus(index);
 		if (currentMillis > status.previousCycleStartMillis + settings.leadTime) {
-			Serial.println("Setting pump power " + String(settings.pumpPower));
-			analogWrite(PUMP1_PIN, settings.pumpPower);
-			wateringMode = PumpRunningWatering;
+			Serial.println("Setting pump " + String(index + 1) + " power " + String(settings.pumpPower));
+			wateringModes[index] = PumpRunningWatering;
+			startPump(index, settings.pumpPower);
 		}
+		return true;
 	}
-	else if (wateringMode == PumpRunningWatering) {
-		WateringStatus status = getWateringStatus();
+	else if (wateringModes[index] == PumpRunningWatering) {
+		WateringStatus status = getWateringStatus(index);
 		if (currentMillis > status.previousCycleStartMillis + settings.leadTime + status.dose) {
-			analogWrite(PUMP1_PIN, 0);
+			stopPump(index);
 			status.usedAmount = status.usedAmount + (currentMillis - status.previousCycleStartMillis - settings.leadTime);
-			Serial.println("Pump stopped, usedAmount " + String(status.usedAmount));
+			Serial.println("Pump " + String(index + 1) + " stopped, usedAmount " + String(status.usedAmount));
 			status.previousCycleStartMillis = currentMillis;
-			putWateringStatus(status);
+			putWateringStatus(index, status);
 			if (status.usedAmount >= status.targetAmount) {
-				wateringMode = Idle;
+				wateringModes[index] = Idle;
 				storeWateringResult(Success);
 				Serial.println("Wmode Idle");
 			}
 			else {
-				wateringMode = Interval;
+				wateringModes[index] = Interval;
 				Serial.println("Wmode Interval");
 			}
+		} else {
+			return true;
 		}
 	}
-	else if (wateringMode == Interval) {
-		WateringStatus status = getWateringStatus();
-		if (currentMillis > status.previousCycleStartMillis + 35000) {
+	else if (wateringModes[index] == Interval) {
+		WateringStatus status = getWateringStatus(index);
+		if (!pumpRunning && currentMillis > status.previousCycleStartMillis + 35000) {
 			Serial.println("Interval elapsed, moisture " + String(currentSoil));
 			if (currentSoil > status.previousCycleMoisture + 10 || status.phaseNumber > 0) { // only check previousCycleMoisture on 1st phase
 				status.previousCycleStartMillis = currentMillis;
 				status.previousCycleMoisture = currentSoil;
 				status.phaseNumber = status.phaseNumber + 1;
-				putWateringStatus(status);
-				Serial.println("Starting pump");
-				analogWrite(PUMP1_PIN, settings.pumpPower);
-				wateringMode = PumpRunningWatering;
+				putWateringStatus(index, status);
+				Serial.println("Starting pump " + String(index + 1));
+				startPump(index, settings.leadPower);
+				wateringModes[index] = PumpRunningLead;
+				return true;
 			}
 			else {
 				Serial.println("Moisture not increased, Wmode Idle");
 				storeWateringResult(MoistureNotIncreased);
-				wateringMode = Idle;
+				wateringModes[index] = Idle;
 			}
 		}
 	}
+
+	return false;
+}
+
+bool shouldStartWatering(int index, WateringSettings settings, word currentSoil, DateTime now) {
+	if (settings.triggerType == MoistureLimit) {
+		if (currentSoil < settings.moistureLimit) {
+			return true;
+		}
+	} else {
+		if (now.hour() == settings.startHour && currentSoil < settings.moistureLimit) {
+			return true;
+		}
+		if (currentSoil < settings.emergencyLimit) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void storeWateringRecord(word baseAmount, word totalAmount, word moistureAtStart, byte series) {
 	WateringRecord newRecord;
 	newRecord.baseAmount = baseAmount;
 	newRecord.totalAmount = totalAmount;
-	newRecord.moistureAtStart = measuringContext.getCurrentSoil();
+	newRecord.moistureAtStart = measuringContext.getCurrentSoil(series);
 	newRecord.time = rtc.now().unixtime();
 	int index = (getWateringRecordIndex(series) + 1) % wateringSeriesItems;
 	putWateringRecord(series, index, newRecord);
@@ -305,7 +374,7 @@ word getBaseAmount(WateringSettings settings, byte series) {
 word calculateTargetAmount(WateringSettings settings, byte series, word baseAmount) {
 	Serial.println("Base amount: " + String(baseAmount));
 
-	int moistureDifference = settings.moistureLimit - measuringContext.getCurrentSoil();
+	int moistureDifference = settings.moistureLimit - measuringContext.getCurrentSoil(series);
 	Serial.println("Moist diff: " + String(moistureDifference));
 	// TODO make a setting
 	float moistureDifferencePart = (float)(moistureDifference) / 200.0 * baseAmount;
@@ -358,33 +427,29 @@ void setup()
 	pinMode(MOISTURE_PIN1, OUTPUT);
 	pinMode(MOISTURE_PIN2, OUTPUT);
 
-	pinMode(PUMP1_PIN, OUTPUT);
+	pinMode(wateringPins[0].pumpPwmPin, OUTPUT);
 
 	pinMode(BUTTON1_PIN, INPUT);
 	pinMode(BUTTON2_PIN, INPUT);
+	pinMode(BUTTON3_PIN, INPUT);
 
 	delay(10);
 
 	for (int i = 0; i < 3; i++)
 	{
-		measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
+		measuringContext.updateMoisture();
 		lcd.noBacklight();
 		delay(250);
 
-		measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
+		measuringContext.updateMoisture();
 		lcd.backlight();
 		delay(250);
 	}
 
-	measuringContext.moistureInterval = 15000;
+	measuringContext.setMoistureInterval(15000);
 
 	_MainMenu->Init(&lcd, _InfoRoller, _HistoryMenu, _Settings, _Test);
 	currentHandler = _InfoRoller;
-
-	//WateringStatus status = getWateringStatus();
-	//if (status.usedAmount < status.targetAmount) {
-	//	wateringMode = Interval;
-	//}
 
 	Serial.println("Done");
 }
@@ -394,7 +459,7 @@ void loop()
 	ErrorMode errorMode = measuringContext.updateDht(DHT, DHT11_PIN);
 	setErrorMode(errorMode);
 
-	measuringContext.updateMoisture(MOISTURE_PIN1, MOISTURE_PIN2);
+	measuringContext.updateMoisture();
 	updateButtonsWithDebounce();
 	updateBacklight();
 	updateWatering();

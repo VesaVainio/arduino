@@ -100,8 +100,6 @@ public:
 		printMenuOnLcd();
 	};
 
-	virtual void updateLcd() {};
-
 	void setWateringSeries(int seriesIndex) {
 		wateringSeries = seriesIndex;
 	}

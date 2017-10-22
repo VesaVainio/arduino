@@ -25,8 +25,14 @@ enum WateringResult : byte {
 	MoistureNotIncreased
 };
 
+enum TriggerType : byte {
+	MoistureLimit,
+	TimeOfDay
+};
+
+// Results of watering
 // store N (e.g 10 pcs) of these per plant
-struct WateringRecord // 10 bytes
+struct WateringRecord // 11 bytes
 {
 	long time; // unix time
 	word moistureAtStart;
@@ -35,10 +41,12 @@ struct WateringRecord // 10 bytes
 	WateringResult result;
 };
 
+// Settings for determining: 1. when to trigger watering 2. the amount to pump 3. how to split the amount to doses
 // settings set by user, one record for each pot/pump
-struct WateringSettings // 12 bytes
+struct WateringSettings // 16 bytes
 {
 	word moistureLimit; // moisture limit for starting watering
+	word emergencyLimit; // moisture limit for starting watering at any time in TimeOfDay trigger mode
 	word potSqCm; // cm^2 of the pot, used to calculate the initial baseAmount
 	byte growthFactor; // how much should the baseAmount increase per 24h as per assumed growth of the plant (may be corrected for temp)
 	byte adjustPercentage; // manual adjustment of watering amount, 100 = 100% = 1
@@ -46,10 +54,13 @@ struct WateringSettings // 12 bytes
 	byte startHour;
 	word leadTime; // how long to run power at start of pumping phase
 	byte leadPower;
+	byte doses;
 	bool enabled;
+	TriggerType triggerType;
 
 	WateringSettings() {
 		moistureLimit = 200;
+		emergencyLimit = 140;
 		potSqCm = 75;
 		growthFactor = 0;
 		adjustPercentage = 100;
@@ -57,14 +68,14 @@ struct WateringSettings // 12 bytes
 		startHour = 19;
 		leadTime = 300;
 		leadPower = 255;
+		doses = 3;
 		enabled = false;
+		triggerType = MoistureLimit;
 	}
 };
 
-// needed only once, as only 1 watering can be in process at once
 struct WateringStatus // 14 bytes
 {
-	byte wateringSeriesIndex; // points to the series, 0 or 1
 	word targetAmount;
 	word usedAmount;
 	word dose;
@@ -73,11 +84,26 @@ struct WateringStatus // 14 bytes
 	unsigned long previousCycleStartMillis;
 
 	WateringStatus() {
-		wateringSeriesIndex = 0;
 		targetAmount = 0;
 		usedAmount = 0;
+		dose = 0;
 		previousCycleMoisture = 0;
 		previousCycleStartMillis = 0;
 		phaseNumber = 0;
 	}
+};
+
+struct WateringPins
+{
+	byte moisturePin1;
+	byte moisturePin2;
+	byte pumpEnablePin;
+	byte pumpPwmPin;
+
+/*	WateringPins() {
+		moisturePin1 = 0;
+		moisturePin2 = 0;
+		pumpEnablePin = 0;
+		pumpPwmPin = 0;
+	}*/
 };

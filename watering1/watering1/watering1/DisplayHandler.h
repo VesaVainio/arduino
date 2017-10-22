@@ -15,7 +15,7 @@ protected:
 public:
 	virtual DisplayHandler* button1Pressed() { return this; }
 	virtual DisplayHandler* button2Pressed() { return this; }
+	virtual DisplayHandler* button3Pressed() { return this; }
 	virtual void activate() {};
 	virtual void updateLcd() {};
 };
-
