@@ -38,15 +38,19 @@ private:
 
 		putMinuteIndex(0);
 		putHourIndex(0);
-		putWateringRecordIndex(0, 0);
-		putWateringRecordIndex(1, 0);
-		putWateringRecordIndex(2, 0);
 		putBacklightMode(On);
+
 		WateringSettings settings;
-		putWateringSettings(0, settings);
-		putWateringSettings(1, settings);
-		putWateringSettings(2, settings);
+		WateringStatus status;
+
+		for (int i=0; i<4; i++) {
+			putWateringRecordIndex(i, 0);
+			putWateringSettings(i, settings);
+			putWateringStatus(i, status);
+		}
+
 		clearAllSamples();
+		delay(1000);
 	}
 
 public:

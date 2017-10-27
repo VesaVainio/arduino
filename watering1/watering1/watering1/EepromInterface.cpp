@@ -14,7 +14,7 @@ const int wateringSeriesInUse = 1;
 const int startOfWateringRecords = startOfHourSamples + seriesCount * oneHourSeriesBytes;
 const int oneWateringRecordSeriesBytes = wateringSeriesItems * sizeof(WateringRecord);
 
-const int startOfWateringSettings = 10;
+const int startOfWateringSettings = 20;
 const int startOfWateringStatus = 100;
 
 void clearAllSamples() {
@@ -120,13 +120,13 @@ byte getWateringRecordIndex(int series) {
 }
 
 void putWateringRecordIndex(int series, int index) {
-	EEPROM.put(6 + series, index);
+	EEPROM.put(6 + (series * 2), index);
 }
 
 BacklightMode getBacklightMode()
 {
 	BacklightMode mode;
-	EEPROM.get(9, mode);
+	EEPROM.get(14, mode);
 	if (mode < 0 || mode > 2) {
 		return On;
 	}
@@ -136,7 +136,7 @@ BacklightMode getBacklightMode()
 
 void putBacklightMode(BacklightMode backlightMode)
 {
-	EEPROM.put(9, backlightMode);
+	EEPROM.put(10, backlightMode);
 }
 
 WateringSettings getWateringSettings(int index) {
