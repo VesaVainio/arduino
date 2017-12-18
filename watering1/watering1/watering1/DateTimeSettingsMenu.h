@@ -85,6 +85,37 @@ public:
 		return this;
 	}
 
+	virtual DisplayHandler* button3Pressed() {
+		DateTime now = _rtc->now();
+
+		switch (itemIndex) {
+		case 0:
+			now = DateTime(decreaseSetting(2017, 2027, 1, now.year()), now.month(), now.day(), now.hour(), now.minute(), now.second());
+			break;
+		case 1:
+			now = DateTime(now.year(), decreaseSetting(1, 12, 1, now.month()), now.day(), now.hour(), now.minute(), now.second());
+			break;
+		case 2:
+			now = DateTime(now.year(), now.month(), decreaseSetting(1, 31, 1, now.day()), now.hour(), now.minute(), now.second());
+			break;
+		case 3:
+			now = DateTime(now.year(), now.month(), now.day(), decreaseSetting(0, 23, 1, now.hour()), now.minute(), now.second());
+			break;
+		case 4:
+			now = DateTime(now.year(), now.month(), now.day(), now.hour(), decreaseSetting(0, 59, 1, now.minute()), now.second());
+			break;
+		case 5:
+			now = DateTime(now.year(), now.month(), now.day(), now.hour(), now.minute(), decreaseSetting(0, 59, 1, now.second()));
+			break;
+		case 6:
+			return _SettingsMenuLocal;
+		}
+
+		_rtc->adjust(now);
+		printMenuOnLcd();
+		return this;
+	}
+
 	virtual void activate() {
 		printMenuOnLcd();
 	};
