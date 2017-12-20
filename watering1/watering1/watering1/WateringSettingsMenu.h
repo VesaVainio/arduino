@@ -96,6 +96,43 @@ public:
 		return this;
 	}
 
+	virtual DisplayHandler* button3Pressed() {
+		WateringSettings settings = getWateringSettings(wateringSeries);
+
+		switch (itemIndex) {
+		case 0:
+			settings.enabled = !settings.enabled;
+			break;
+		case 1:
+			settings.moistureLimit = decreaseSetting(50, 350, 10, settings.moistureLimit);
+			break;
+		case 2:
+			settings.potSqCm = decreaseSetting(75, 1000, 25, settings.potSqCm);
+			break;
+		case 3:
+			settings.growthFactor = decreaseSetting(0, 200, 10, settings.growthFactor);
+			break;
+		case 4:
+			settings.adjustPercentage = decreaseSetting(25, 200, 5, settings.adjustPercentage);
+			break;
+		case 5:
+			settings.pumpPower = decreaseSetting(50, 250, 10, settings.pumpPower);
+			break;
+		case 6:
+			settings.leadTime = decreaseSetting(50, 2000, 50, settings.leadTime);
+			break;
+		case 7:
+			settings.startHour = decreaseSetting(1, 24, 1, settings.startHour);
+			break;
+		case 8:
+			return _SettingsMenuLocal;
+		}
+
+		putWateringSettings(wateringSeries, settings);
+		printMenuOnLcd();
+		return this;
+	}
+
 	virtual void activate() {
 		printMenuOnLcd();
 	};
