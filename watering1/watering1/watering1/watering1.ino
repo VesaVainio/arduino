@@ -27,11 +27,11 @@
 int const wateringCount = 4;
 WateringMode wateringModes[] = { Idle, Idle, Idle, Idle };
 
-WateringPins const wateringPins[] = {
-		{ 24, 25, 2, 2 },
-		{ 0, 0, 6, 6 },
-		{ 0, 0, 0, 0 },
-		{ 0, 0, 0, 0 }
+WateringPins wateringPins[] = {
+		{ 24, 25, 0, 2, 2 },
+		{ 0, 0, 0, 6, 6 },
+		{ 0, 0, 0, 0, 0 },
+		{ 0, 0, 0, 0, 0 }
 };
 
 LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
@@ -52,7 +52,7 @@ int button2State = LOW;
 int button3State = LOW;
 bool buttonStateChanging = false;
 
-MeasuringContext measuringContext = new MeasuringContext(wateringCount);
+MeasuringContext* measuringContext = new MeasuringContext(wateringCount, &wateringPins);
 
 void setErrorMode(ErrorMode newMode)
 {
@@ -84,10 +84,10 @@ void doSampling()
 	int minuteIndex = getMinuteIndex();
 
 	nextMinuteSampleMillis += 300000ul;
-	putMinuteSample(0, minuteIndex, (float)measuringContext.getCurrentTemperature());
-	putMinuteSample(1, minuteIndex, (float)measuringContext.getCurrentAirHumidity());
+	putMinuteSample(0, minuteIndex, (float)measuringContext->getCurrentTemperature());
+	putMinuteSample(1, minuteIndex, (float)measuringContext->getCurrentAirHumidity());
 	for (int i=0; i<wateringCount; i++) {
-		putMinuteSample(2 + i, minuteIndex, (float)measuringContext.getCurrentSoil(i));
+		putMinuteSample(2 + i, minuteIndex, (float)measuringContext->getCurrentSoil(i));
 	}
 
 	minuteIndex++;
@@ -125,7 +125,7 @@ void doSampling()
 }
 
 MainMenu* _MainMenu = new MainMenu();
-InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, &measuringContext, _MainMenu);
+InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, measuringContext, _MainMenu);
 HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu);
 SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, 2);
 TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringPins[0].pumpPwmPin);
@@ -222,16 +222,16 @@ void updateWatering() {
 }
 
 void startPump(int index, int power) {
-	if (wateringPins[index].pumpEnablePin != wateringPins[index].pumpPwmPin) {
-		digitalWrite(wateringPins[index].pumpEnablePin, HIGH);
+	if (wateringPins[index].pumpOnOffPin != wateringPins[index].pumpPwmPin) {
+		digitalWrite(wateringPins[index].pumpOnOffPin, HIGH);
 	}
 
 	analogWrite(wateringPins[index].pumpPwmPin, power);
 }
 
 void stopPump(int index) {
-	if (wateringPins[index].pumpEnablePin != wateringPins[index].pumpPwmPin) {
-		digitalWrite(wateringPins[index].pumpEnablePin, LOW);
+	if (wateringPins[index].pumpOnOffPin != wateringPins[index].pumpPwmPin) {
+		digitalWrite(wateringPins[index].pumpOnOffPin, LOW);
 	}
 
 	analogWrite(wateringPins[index].pumpPwmPin, 0);
@@ -239,7 +239,7 @@ void stopPump(int index) {
 
 bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunning) {
 	unsigned long currentMillis = millis();
-	word currentSoil = abs(measuringContext.getCurrentSoil(index));
+	word currentSoil = abs(measuringContext->getCurrentSoil(index));
 
 	if (currentSoil < 20) {
 		// moisture reading abnormal
@@ -344,7 +344,7 @@ void storeWateringRecord(word baseAmount, word totalAmount, word moistureAtStart
 	WateringRecord newRecord;
 	newRecord.baseAmount = baseAmount;
 	newRecord.totalAmount = totalAmount;
-	newRecord.moistureAtStart = measuringContext.getCurrentSoil(series);
+	newRecord.moistureAtStart = measuringContext->getCurrentSoil(series);
 	newRecord.time = rtc.now().unixtime();
 	int index = (getWateringRecordIndex(series) + 1) % wateringSeriesItems;
 	putWateringRecord(series, index, newRecord);
@@ -374,7 +374,7 @@ word getBaseAmount(WateringSettings settings, byte series) {
 word calculateTargetAmount(WateringSettings settings, byte series, word baseAmount) {
 	Serial.println("Base amount: " + String(baseAmount));
 
-	int moistureDifference = settings.moistureLimit - measuringContext.getCurrentSoil(series);
+	int moistureDifference = settings.moistureLimit - measuringContext->getCurrentSoil(series);
 	Serial.println("Moist diff: " + String(moistureDifference));
 	// TODO make a setting
 	float moistureDifferencePart = (float)(moistureDifference) / 200.0 * baseAmount;
@@ -437,16 +437,16 @@ void setup()
 
 	for (int i = 0; i < 3; i++)
 	{
-		measuringContext.updateMoisture();
+		measuringContext->updateMoisture();
 		lcd.noBacklight();
 		delay(250);
 
-		measuringContext.updateMoisture();
+		measuringContext->updateMoisture();
 		lcd.backlight();
 		delay(250);
 	}
 
-	measuringContext.setMoistureInterval(15000);
+	measuringContext->setMoistureInterval(15000);
 
 	_MainMenu->Init(&lcd, _InfoRoller, _HistoryMenu, _Settings, _Test);
 	currentHandler = _InfoRoller;
@@ -456,10 +456,10 @@ void setup()
 
 void loop()
 {
-	ErrorMode errorMode = measuringContext.updateDht(DHT, DHT11_PIN);
+	ErrorMode errorMode = measuringContext->updateDht(DHT, DHT11_PIN);
 	setErrorMode(errorMode);
 
-	measuringContext.updateMoisture();
+	measuringContext->updateMoisture();
 	updateButtonsWithDebounce();
 	updateBacklight();
 	updateWatering();

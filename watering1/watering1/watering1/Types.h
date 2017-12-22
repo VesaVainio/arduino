@@ -97,7 +97,8 @@ struct WateringPins
 {
 	byte moisturePin1;
 	byte moisturePin2;
-	byte pumpEnablePin;
+	byte moistureAnalog;
+	byte pumpOnOffPin;
 	byte pumpPwmPin;
 
 /*	WateringPins() {

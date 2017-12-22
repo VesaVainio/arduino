@@ -5,10 +5,7 @@
 class MeasuringContext
 {
 private:
-	int const M_PIN1 = 0;
-	int const M_PIN2 = 1;
-	int const M_ANALOG = 2;
-	int const MOISTURE_PINS[2][3] = { { 24, 25, 0}, { 32, 33, 2}};
+	WateringPins (*wateringPins)[4]; // pointer to an array
 
 	unsigned long dhtUpdatedMillis = 0;
 	unsigned long moistureUpdatedMillis = 0;
@@ -22,8 +19,9 @@ private:
 	int wateringCount = 0;
 
 public:
-	MeasuringContext(int wateringCount_) {
+	MeasuringContext(int wateringCount_, WateringPins (*pinsArray)[4]) {
 		wateringCount = wateringCount_;
+		wateringPins = pinsArray;
 	}
 
 	void setMoistureInterval(int interval) {
@@ -49,24 +47,24 @@ public:
 			if (moistureReadingState == 0 && currentMillis > moistureUpdatedMillis + moistureInterval)
 			{
 				moistureReadingState = 1;
-				digitalWrite(MOISTURE_PINS[i][M_PIN1], HIGH);
-				digitalWrite(MOISTURE_PINS[i][M_PIN2], LOW);
+				digitalWrite((*wateringPins)[i].moisturePin1, HIGH);
+				digitalWrite((*wateringPins)[i].moisturePin2, LOW);
 				moistureUpdatedMillis = currentMillis;
 			}
 			else if (moistureReadingState == 1 && currentMillis > moistureUpdatedMillis + 200)
 			{
-				currentSoilValues[i] = analogRead(MOISTURE_PINS[i][M_ANALOG]); // actually get the reading
+				currentSoilValues[i] = analogRead((*wateringPins)[i].moistureAnalog); // actually get the reading
 
 				moistureReadingState = 2;
-				digitalWrite(MOISTURE_PINS[i][M_PIN1], LOW);
-				digitalWrite(MOISTURE_PINS[i][M_PIN2], HIGH);
+				digitalWrite((*wateringPins)[i].moisturePin1, LOW);
+				digitalWrite((*wateringPins)[i].moisturePin2, HIGH);
 				moistureUpdatedMillis = currentMillis;
 			}
 			else if (moistureReadingState == 2 && currentMillis > moistureUpdatedMillis + 200)
 			{
 				moistureReadingState = 0;
-				digitalWrite(MOISTURE_PINS[i][M_PIN1], LOW);
-				digitalWrite(MOISTURE_PINS[i][M_PIN2], LOW);
+				digitalWrite((*wateringPins)[i].moisturePin1, LOW);
+				digitalWrite((*wateringPins)[i].moisturePin1, LOW);
 				moistureUpdatedMillis = currentMillis;
 			}
 		}
