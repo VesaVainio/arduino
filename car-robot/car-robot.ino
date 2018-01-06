@@ -323,8 +323,8 @@ void loop() {
 			case Move_Forward_Right:
 				digitalWrite(LEFT, LOW);
 				digitalWrite(RIGHT, HIGH);
-				digitalWrite(FORWARD, LOW);
-				digitalWrite(BACK, HIGH);
+				digitalWrite(FORWARD, HIGH);
+				digitalWrite(BACK, LOW);
 				analogWrite(MOTOR_ENABLE, NORMAL_POWER);
 				break;
 			case Move_Backward:
@@ -344,8 +344,8 @@ void loop() {
 			case Move_Backward_Right:
 				digitalWrite(LEFT, LOW);
 				digitalWrite(RIGHT, HIGH);
-				digitalWrite(FORWARD, HIGH);
-				digitalWrite(BACK, LOW);
+				digitalWrite(FORWARD, LOW);
+				digitalWrite(BACK, HIGH);
 				analogWrite(MOTOR_ENABLE, NORMAL_POWER);
 				break;
 			}
