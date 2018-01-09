@@ -11,13 +11,13 @@
 #define BUTTON_LEFT 4
 #define BUTTON_RIGHT 2
 
-#define MOTOR_ENABLE 6
+#define MOTOR_ENABLE 3
 
-#define LIGHTS 3
+#define LIGHTS 6
 
 #define NORMAL_POWER 140
 #define LOWER_POWER 120
-#define BOOST_POWER 140
+#define BOOST_POWER 180
 
 #define MAX_STEPS 200
 
@@ -86,7 +86,7 @@ void setup() {
 	pinMode(BUTTON_LEFT, INPUT);
 	pinMode(BUTTON_RIGHT, INPUT);
 
-	Serial.begin(115200);
+	//Serial.begin(115200);
 
 	initSteps();
 }
@@ -109,7 +109,7 @@ void initPlaying(unsigned long currentMillis) {
 void loop() {
 	unsigned long currentMillis = millis();
 
-	Serial.println("Mode " + String(currentMode) + " millis " + String(currentMillis));
+	//Serial.println("Mode " + String(currentMode) + " millis " + String(currentMillis));
 
 	if (currentMode == Programming) {
 		if (firstFreeIndex >= MAX_STEPS - 1) {
@@ -287,12 +287,12 @@ void loop() {
 		}
 
 		if (currentMillis - stepPlayStart > STEP_DURATION) {
-			Serial.println("Playing step " + String(currentPlayIndex) + " / " + String(firstFreeIndex));
+			//Serial.println("Playing step " + String(currentPlayIndex) + " / " + String(firstFreeIndex));
 			if (currentPlayIndex + 1 == firstFreeIndex) {
 				stop();
 				currentMode = Waiting;
 				analogWrite(LIGHTS, 50);
-				Serial.println("Entering Waiting mode");
+				//Serial.println("Entering Waiting mode");
 				return;
 			}
 
@@ -300,20 +300,12 @@ void loop() {
 			currentPlayIndex++;
 
 			if (steps[currentPlayIndex] == steps[currentPlayIndex - 1]) {
-				Serial.println("Current step same as previous");
+				//Serial.println("Current step same as previous");
 				analogWrite(MOTOR_ENABLE, determinePower());
 				return;
 			}
 
-			//if (isChangingDirection()) {
-			//	analogWrite(MOTOR_ENABLE, 0); 
-			//	digitalWrite(FORWARD, LOW);
-			//	digitalWrite(BACK, LOW);
-			//	Serial.println("Slowing down for 100ms");
-			//	delay(100);
-			//}
-
-			Serial.println("Entering switch with " + String(steps[currentPlayIndex]));
+			//Serial.println("Entering switch with " + String(steps[currentPlayIndex]));
 			switch (steps[currentPlayIndex])
 			{
 			case Wait:
@@ -366,11 +358,10 @@ void loop() {
 				analogWrite(MOTOR_ENABLE, determinePower());
 				break;
 			}
-			Serial.println("Switch executed");
 		}
 	}
 	else if (currentMode == Waiting) {
-		Serial.println("In waiting mode");
+		//Serial.println("In waiting mode");
 		delay(200);
 		if (digitalRead(BUTTON_START) == HIGH) {
 			initPlaying(currentMillis);
@@ -387,8 +378,7 @@ void loop() {
 		}
 	}
 
-	//delay(1);
-	delay(100);
+	delay(1);
 }
 
 int determinePower() {
@@ -400,16 +390,16 @@ int determinePower() {
 	StepType previous = steps[currentPlayIndex - 1];
 
 	if (isChangingDirection()) {
-		Serial.println("Boost power");
+		//Serial.println("Boost power");
 		return BOOST_POWER;
 	}
 
 	if (current == Move_Forward || current == Move_Backward) {
-		Serial.println("Lower power");
+		//Serial.println("Lower power");
 		return LOWER_POWER;
 	}
 
-	Serial.println("Normal power");
+	//Serial.println("Normal power");
 	return NORMAL_POWER;
 }
 
@@ -428,20 +418,9 @@ boolean isChangingDirection() {
 }
 
 void stop() {
-	Serial.println("Stopping - braking");
-	analogWrite(MOTOR_ENABLE, 255);
 	digitalWrite(LEFT, LOW);
 	digitalWrite(RIGHT, LOW);
-	digitalWrite(FORWARD, HIGH);
-	digitalWrite(BACK, HIGH);
-
-	delay(500);
-
-	Serial.println("Stopping");
-
-	analogWrite(MOTOR_ENABLE, 0);
 	digitalWrite(FORWARD, LOW);
 	digitalWrite(BACK, LOW);
-
-	Serial.println("Stopped");
+	analogWrite(MOTOR_ENABLE, 0);
 }
