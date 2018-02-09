@@ -136,7 +136,7 @@ BacklightMode getBacklightMode()
 
 void putBacklightMode(BacklightMode backlightMode)
 {
-	EEPROM.put(10, backlightMode);
+	EEPROM.put(14, backlightMode);
 }
 
 WateringSettings getWateringSettings(int index) {
