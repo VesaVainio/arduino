@@ -14,6 +14,7 @@
 #include "HistoryMenu.h"
 #include "SettingsMenu.h"
 #include "TestMenu.h"
+#include "Utils.h"
 
 #define DHT11_PIN 4
 
@@ -24,11 +25,11 @@
 #define BUTTON2_PIN 28
 #define BUTTON3_PIN 30
 
-int const wateringCount = 4;
+int const wateringCount = 2;
 WateringMode wateringModes[] = { Idle, Idle, Idle, Idle };
 
 WateringPins wateringPins[] = {
-		{ 24, 25, 0, 2, 2 },
+		{ 24, 25, 0, 38, 5 },
 		{ 0, 0, 0, 6, 6 },
 		{ 0, 0, 0, 0, 0 },
 		{ 0, 0, 0, 0, 0 }
@@ -127,8 +128,8 @@ void doSampling()
 MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, measuringContext, _MainMenu);
 HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu);
-SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, 2);
-TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringPins[0].pumpPwmPin);
+SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, wateringCount);
+TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringCount, &wateringPins);
 
 DisplayHandler* currentHandler;
 
@@ -222,19 +223,11 @@ void updateWatering() {
 }
 
 void startPump(int index, int power) {
-	if (wateringPins[index].pumpOnOffPin != wateringPins[index].pumpPwmPin) {
-		digitalWrite(wateringPins[index].pumpOnOffPin, HIGH);
-	}
-
-	analogWrite(wateringPins[index].pumpPwmPin, power);
+	startPump(&wateringPins, index, power);
 }
 
 void stopPump(int index) {
-	if (wateringPins[index].pumpOnOffPin != wateringPins[index].pumpPwmPin) {
-		digitalWrite(wateringPins[index].pumpOnOffPin, LOW);
-	}
-
-	analogWrite(wateringPins[index].pumpPwmPin, 0);
+	stopPump(&wateringPins, index);
 }
 
 bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunning) {

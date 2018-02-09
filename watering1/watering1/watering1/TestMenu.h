@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "EepromInterface.h"
 #include "LeadTimeTestMenu.h"
+#include "TestPumpMenu.h"
 
 class TestMenu : public DisplayHandler {
 private:
@@ -11,10 +12,9 @@ private:
 	unsigned long pumpTestStart = 0;
 	bool pumpTestRunning = false;
 	
-	int _pump1Pin = 0;
-
 	DisplayHandler* _MainMenuLocal = 0;
 	DisplayHandler* _LeadTimeTestMenu = 0;
+	DisplayHandler* _TestPumpMenu = 0;
 	LiquidCrystal_I2C* _lcd;
 
 	void printMenuOnLcd() {
@@ -26,11 +26,11 @@ private:
 	};
 
 public:
-	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int pump1Pin) {
+	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int wateringCount, WateringPins(*pinsArray)[4]) {
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
-		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, pump1Pin);
-		_pump1Pin = pump1Pin;
+		_TestPumpMenu = new TestPumpMenu(lcd, this, wateringCount, pinsArray);
+		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, pinsArray[0]->pumpPwmPin);
 	}
 
 	virtual DisplayHandler* button1Pressed() {
@@ -43,10 +43,7 @@ public:
 		int pump1Power = getWateringSettings(0).pumpPower;
 		switch (itemIndex) {
 		case 0:
-			pumpTestStart = millis();
-			analogWrite(_pump1Pin, pump1Power);
-			pumpTestRunning = true;
-			break;
+			return _TestPumpMenu;
 		case 1:
 			return _LeadTimeTestMenu;
 		case 2:
@@ -57,19 +54,5 @@ public:
 
 	virtual void activate() {
 		printMenuOnLcd();
-	};
-
-	virtual void updateLcd() {
-		if (pumpTestRunning == true) {
-			unsigned long runningTime = millis() - pumpTestStart;
-			_lcd->clear();
-			_lcd->setCursor(0, 0);
-			_lcd->print("PUMP 1 TEST " + String(runningTime));
-			if (runningTime > 3000) {
-				analogWrite(_pump1Pin, 0);
-				pumpTestRunning = false;
-				printMenuOnLcd();
-			}
-		}
 	};
 };

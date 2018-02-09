@@ -15,7 +15,9 @@ private:
 	void printMenuOnLcd() {
 		_lcd->clear();
 		_lcd->setCursor(0, 0);
-		_lcd->print("SET");
+		_lcd->print("PLANT");
+		_lcd->print(' ');
+		_lcd->print(String(wateringSeries + 1));
 		_lcd->setCursor(0, 1);
 		_lcd->print(menuItems[itemIndex]);
 		_lcd->print(' ');
