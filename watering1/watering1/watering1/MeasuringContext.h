@@ -5,7 +5,7 @@
 class MeasuringContext
 {
 private:
-	WateringPins (*wateringPins)[4]; // pointer to an array
+	WateringPins* wateringPins; // pointer to an array
 
 	unsigned long dhtUpdatedMillis = 0;
 	unsigned long moistureUpdatedMillis = 0;
@@ -19,7 +19,7 @@ private:
 	int wateringCount = 0;
 
 public:
-	MeasuringContext(int wateringCount_, WateringPins (*pinsArray)[4]) {
+	MeasuringContext(int wateringCount_, WateringPins* pinsArray) {
 		wateringCount = wateringCount_;
 		wateringPins = pinsArray;
 	}
@@ -43,30 +43,34 @@ public:
 	void updateMoisture()
 	{
 		unsigned long currentMillis = millis();
-		for (int i=0; i<wateringCount; i++) {
-			if (moistureReadingState == 0 && currentMillis > moistureUpdatedMillis + moistureInterval)
-			{
-				moistureReadingState = 1;
-				digitalWrite((*wateringPins)[i].moisturePin1, HIGH);
-				digitalWrite((*wateringPins)[i].moisturePin2, LOW);
-				moistureUpdatedMillis = currentMillis;
+		if (moistureReadingState == 0 && currentMillis > moistureUpdatedMillis + moistureInterval)
+		{
+			moistureReadingState = 1;
+			for (int i = 0; i < wateringCount; i++) {
+				digitalWrite(wateringPins[i].moisturePin1, HIGH);
+				digitalWrite(wateringPins[i].moisturePin2, LOW);
 			}
-			else if (moistureReadingState == 1 && currentMillis > moistureUpdatedMillis + 200)
-			{
-				currentSoilValues[i] = analogRead((*wateringPins)[i].moistureAnalog); // actually get the reading
+			moistureUpdatedMillis = currentMillis;
+		}
+		else if (moistureReadingState == 1 && currentMillis > moistureUpdatedMillis + 200)
+		{
+			moistureReadingState = 2;
+			for (int i = 0; i < wateringCount; i++) {
+				currentSoilValues[i] = analogRead(wateringPins[i].moistureAnalog); // actually get the reading
 
-				moistureReadingState = 2;
-				digitalWrite((*wateringPins)[i].moisturePin1, LOW);
-				digitalWrite((*wateringPins)[i].moisturePin2, HIGH);
-				moistureUpdatedMillis = currentMillis;
+				digitalWrite(wateringPins[i].moisturePin1, LOW);
+				digitalWrite(wateringPins[i].moisturePin2, HIGH);
 			}
-			else if (moistureReadingState == 2 && currentMillis > moistureUpdatedMillis + 200)
-			{
-				moistureReadingState = 0;
-				digitalWrite((*wateringPins)[i].moisturePin1, LOW);
-				digitalWrite((*wateringPins)[i].moisturePin1, LOW);
-				moistureUpdatedMillis = currentMillis;
+			moistureUpdatedMillis = currentMillis;
+		}
+		else if (moistureReadingState == 2 && currentMillis > moistureUpdatedMillis + 200)
+		{
+			moistureReadingState = 0;
+			for (int i = 0; i < wateringCount; i++) {
+				digitalWrite(wateringPins[i].moisturePin1, LOW);
+				digitalWrite(wateringPins[i].moisturePin1, LOW);
 			}
+			moistureUpdatedMillis = currentMillis;
 		}
 	}
 

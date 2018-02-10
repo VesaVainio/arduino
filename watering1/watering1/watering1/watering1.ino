@@ -50,7 +50,7 @@ int button2State = LOW;
 int button3State = LOW;
 bool buttonStateChanging = false;
 
-MeasuringContext* measuringContext = new MeasuringContext(wateringCount, &wateringPins);
+MeasuringContext* measuringContext = new MeasuringContext(wateringCount, wateringPins);
 
 void setErrorMode(ErrorMode newMode)
 {
