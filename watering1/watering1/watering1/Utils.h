@@ -4,10 +4,15 @@
 
 void startPump(WateringPins(*wateringPins)[4], int index, int power) {
 	if (wateringPins[index]->pumpOnOffPin != wateringPins[index]->pumpPwmPin) {
-		digitalWrite(wateringPins[index]->pumpOnOffPin, HIGH);
+		int onOffPin = wateringPins[index]->pumpOnOffPin;
+		Serial.println("Setting pin " + String(onOffPin) + " high");
+		digitalWrite(onOffPin, HIGH);
 	}
 
-	analogWrite(wateringPins[index]->pumpPwmPin, power);
+	int pwmPin = wateringPins[index]->pumpPwmPin;
+
+	Serial.println("Setting pin " + String(pwmPin) + " to " + String(power));
+	analogWrite(pwmPin, power);
 }
 
 void stopPump(WateringPins(*wateringPins)[4], int index) {

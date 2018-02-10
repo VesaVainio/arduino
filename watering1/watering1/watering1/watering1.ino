@@ -18,9 +18,6 @@
 
 #define DHT11_PIN 4
 
-#define MOISTURE_PIN1 24
-#define MOISTURE_PIN2 25
-
 #define BUTTON1_PIN 29
 #define BUTTON2_PIN 28
 #define BUTTON3_PIN 30
@@ -30,7 +27,7 @@ WateringMode wateringModes[] = { Idle, Idle, Idle, Idle };
 
 WateringPins wateringPins[] = {
 		{ 24, 25, 0, 38, 5 },
-		{ 0, 0, 0, 6, 6 },
+		{ 34, 35, 1, 39, 5 },
 		{ 0, 0, 0, 0, 0 },
 		{ 0, 0, 0, 0, 0 }
 };
@@ -407,7 +404,7 @@ void setup()
 	Serial.begin(9600);
 	Serial.println("Setup");
 
-	lcd.begin(16, 2);
+	lcd.begin(20, 4);
 
 	if (rtc.lostPower()) {
 		Serial.println("RTC has lost power, initializing");
@@ -417,10 +414,16 @@ void setup()
 
 	rtc.begin();
 
-	pinMode(MOISTURE_PIN1, OUTPUT);
-	pinMode(MOISTURE_PIN2, OUTPUT);
-
-	pinMode(wateringPins[0].pumpPwmPin, OUTPUT);
+	for (int i = 0; i < wateringCount; i++) {
+		Serial.println("Setting moisturePin1 " + String(wateringPins[i].moisturePin1) + " as output");
+		pinMode(wateringPins[i].moisturePin1, OUTPUT);
+		Serial.println("Setting moisturePin2 " + String(wateringPins[i].moisturePin2) + " as output");
+		pinMode(wateringPins[i].moisturePin2, OUTPUT);
+		Serial.println("Setting pumpOnOffPin " + String(wateringPins[i].pumpOnOffPin) + " as output");
+		pinMode(wateringPins[i].pumpOnOffPin, OUTPUT);
+		Serial.println("Setting pumpPwmPin " + String(wateringPins[i].pumpPwmPin) + " as output");
+		pinMode(wateringPins[i].pumpPwmPin, OUTPUT);
+	}
 
 	pinMode(BUTTON1_PIN, INPUT);
 	pinMode(BUTTON2_PIN, INPUT);

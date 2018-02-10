@@ -11,7 +11,6 @@ private:
 	MainMenu* _MainMenu;
 
 	enum Mode {
-		Current,
 		Hours1,
 		Hours6,
 		Stats
@@ -26,7 +25,7 @@ public:
 		_rtc = rtc;
 		_measuringContext = measuringContext;
 		_MainMenu = mainMenu;
-		mode = Current;
+		mode = Hours1;
 		lcdUpdatedMillis = 0;
 	}
 
@@ -44,33 +43,26 @@ public:
 		{
 			_lcd->clear();
 			_lcd->setCursor(0, 0);
+			_lcd->print("tmp    " + String(_measuringContext->getCurrentTemperature()));
+			_lcd->setCursor(10, 0);
+			_lcd->print("hmd    " + String(_measuringContext->getCurrentAirHumidity()));
+			_lcd->setCursor(0, 1);
+			_lcd->print("soil1 " + String(_measuringContext->getCurrentSoil(0)));
+			_lcd->setCursor(10, 1);
+			_lcd->print("soil2 ");
+			padPrintNumberi(_measuringContext->getCurrentSoil(1), true, ' ');
+
+			_lcd->setCursor(0, 2);
 
 			if (mode == Stats)
 			{
-				mode = Current;
-				_lcd->print("tmp  " + String(_measuringContext->getCurrentTemperature()) + " hmd " + String(_measuringContext->getCurrentAirHumidity()));
-				_lcd->setCursor(0, 1);
-				_lcd->print("soil1 " + String(_measuringContext->getCurrentSoil(0)));
-				_lcd->setCursor(10, 1);
-				_lcd->print("soil2 " + String(_measuringContext->getCurrentSoil(1)));
-			}
-			else if (mode == Current)
-			{
 				mode = Hours1;
-				_lcd->print("1h " + String(getNHoursAvg(0, 1), 1) + " " + String(getNHoursAvg(1, 1), 1));
-				_lcd->setCursor(0, 1);
-				_lcd->print("   " + String(getNHoursAvg(2, 1), 1) + "  ");
-				_lcd->setCursor(10, 1);
-				_lcd->print(String(getNHoursAvg(3, 1), 1) + "  ");
+				printForNumHours(1);
 			}
 			else if (mode == Hours1)
 			{
 				mode = Hours6;
-				_lcd->print("6h " + String(getNHoursAvg(0, 6), 1) + " " + String(getNHoursAvg(1, 6), 1));
-				_lcd->setCursor(0, 1);
-				_lcd->print("   " + String(getNHoursAvg(2, 6), 1));
-				_lcd->setCursor(10, 1);
-				_lcd->print(String(getNHoursAvg(3, 6), 1) + "  ");
+				printForNumHours(6);
 			}
 			else if (mode == Hours6)
 			{
@@ -78,11 +70,53 @@ public:
 				DateTime now = _rtc->now();
 				DateTime testTime = DateTime(now.unixtime());
 				_lcd->print("run " + String(currentMillis / (1000 * 60ul * 60ul)) + "h " + String((currentMillis % (1000 * 60ul * 60ul)) / (1000 * 60ul)) + "min");
-				_lcd->setCursor(0, 1);
-				_lcd->print(String(testTime.hour()) + ":" + String(testTime.minute()) + ":" + String(testTime.second()));
+				
+				_lcd->setCursor(0, 3);
+				_lcd->print("clock ");
+				padPrintNumberi(testTime.hour(), false, '0');
+				_lcd->print(':');
+				padPrintNumberi(testTime.minute(), false, '0');
+				_lcd->print(':');
+				padPrintNumberi(testTime.second(), false, '0');
 			}
 
 			lcdUpdatedMillis = currentMillis;
 		}
 	};
+
+	void printForNumHours(int hours) {
+		_lcd->print(String(hours));
+		_lcd->print("h  ");
+		padPrintNumberf(getNHoursAvg(0, hours), true, ' ');
+		_lcd->setCursor(10, 2);
+		padPrintNumberf(getNHoursAvg(1, hours), true, ' ');
+		_lcd->setCursor(4, 3);
+		padPrintNumberf(getNHoursAvg(2, hours), true, ' ');
+		_lcd->setCursor(10, 3);
+		padPrintNumberf(getNHoursAvg(3, hours), true, ' ');
+	}
+
+	void padPrintNumberi(int number, bool padHundreds, char padChar) {
+		if (padHundreds && number < 100) {
+			_lcd->print(padChar);
+		}
+		
+		if (number < 10) {
+			_lcd->print(padChar);
+		}
+
+		_lcd->print(String(number));
+	} 
+
+	void padPrintNumberf(float number, bool padHundreds, char padChar) {
+		if (padHundreds && number < 100) {
+			_lcd->print(padChar);
+		}
+
+		if (number < 10) {
+			_lcd->print(padChar);
+		}
+
+		_lcd->print(String(number, 1));
+	}
 };
