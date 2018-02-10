@@ -277,7 +277,7 @@ bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunnin
 			putWateringStatus(index, status);
 			if (status.usedAmount >= status.targetAmount) {
 				wateringModes[index] = Idle;
-				storeWateringResult(Success);
+				storeWateringResult(Success, index);
 				Serial.println("Wmode Idle");
 			}
 			else {
@@ -304,7 +304,7 @@ bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunnin
 			}
 			else {
 				Serial.println("Moisture not increased, Wmode Idle");
-				storeWateringResult(MoistureNotIncreased);
+				storeWateringResult(MoistureNotIncreased, index);
 				wateringModes[index] = Idle;
 			}
 		}
@@ -314,6 +314,24 @@ bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunnin
 }
 
 bool shouldStartWatering(int index, WateringSettings settings, word currentSoil, DateTime now) {
+	int recordIndex = getWateringRecordIndex(index);
+	int recentCount = 0;
+	unsigned long unixTimeDayAgo = now.unixtime() - 24 * 60 * 60;
+	for (int i = 0; i < 2; i++) {
+		WateringRecord oldRecord = getWateringRecord(index, recordIndex);
+		if (oldRecord.time > unixTimeDayAgo) {
+			recentCount++;
+			if (recentCount == 2) {
+				Serial.println("Pump " + String(index) + " already has 2 watering in last 24 hours");
+				return false;
+			}
+		}
+		recordIndex--;
+		if (recordIndex < 0) {
+			recordIndex = wateringSeriesItems - 1;
+		}
+	}
+
 	if (settings.triggerType == MoistureLimit) {
 		if (currentSoil < settings.moistureLimit) {
 			return true;
@@ -341,11 +359,11 @@ void storeWateringRecord(word baseAmount, word totalAmount, word moistureAtStart
 	putWateringRecordIndex(series, index);
 }
 
-void storeWateringResult(WateringResult result) {
-	byte index = getWateringRecordIndex(0);
-	WateringRecord record = getWateringRecord(0, index);
+void storeWateringResult(WateringResult result, byte series) {
+	byte index = getWateringRecordIndex(series);
+	WateringRecord record = getWateringRecord(series, index);
 	record.result = result;
-	putWateringRecord(0, index, record);
+	putWateringRecord(series, index, record);
 }
 
 word getBaseAmount(WateringSettings settings, byte series) {
