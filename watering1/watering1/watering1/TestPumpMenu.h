@@ -10,7 +10,7 @@ private:
 	unsigned long pumpTestStart = 0;
 	bool pumpTestRunning = false;
 
-	WateringPins(*wateringPins)[4]; // pointer to an array
+	WateringPins* wateringPins; // pointer to an array
 
 	DisplayHandler* _TestMenuLocal = 0;
 	LiquidCrystal_I2C* _lcd;
@@ -31,7 +31,7 @@ private:
 	};
 
 public:
-	TestPumpMenu(LiquidCrystal_I2C* lcd, DisplayHandler* testMenu, int wateringCount_, WateringPins(*pinsArray)[4])
+	TestPumpMenu(LiquidCrystal_I2C* lcd, DisplayHandler* testMenu, int wateringCount_, WateringPins* pinsArray)
 		: FlexMenuHandler(2, 0, wateringCount_)
 	{
 		_lcd = lcd;

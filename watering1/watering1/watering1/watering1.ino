@@ -126,7 +126,7 @@ MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, measuringContext, _MainMenu);
 HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu);
 SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, wateringCount);
-TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringCount, &wateringPins);
+TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringCount, wateringPins);
 
 DisplayHandler* currentHandler;
 
@@ -220,11 +220,11 @@ void updateWatering() {
 }
 
 void startPump(int index, int power) {
-	startPump(&wateringPins, index, power);
+	startPump(wateringPins, index, power);
 }
 
 void stopPump(int index) {
-	stopPump(&wateringPins, index);
+	stopPump(wateringPins, index);
 }
 
 bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunning) {

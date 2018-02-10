@@ -26,11 +26,12 @@ private:
 	};
 
 public:
-	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int wateringCount, WateringPins(*pinsArray)[4]) {
+	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int wateringCount, WateringPins* pinsArray) {
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
 		_TestPumpMenu = new TestPumpMenu(lcd, this, wateringCount, pinsArray);
-		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, pinsArray[0]->pumpPwmPin);
+		WateringPins pins1 = pinsArray[0];
+		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, pins1.pumpPwmPin);
 	}
 
 	virtual DisplayHandler* button1Pressed() {
