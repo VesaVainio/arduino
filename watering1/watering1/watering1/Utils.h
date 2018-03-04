@@ -22,3 +22,29 @@ void stopPump(WateringPins *wateringPins, int index) {
 
 	analogWrite(wateringPins[index].pumpPwmPin, 0);
 }
+
+String padIntNumber(int number, bool padHundreds, char padChar) {
+	String padding = "";
+	if (padHundreds && number < 100) {
+		padding = padding + padChar;
+	}
+
+	if (number < 10) {
+		padding = padding + padChar;
+	}
+
+	return padding + String(number);
+}
+
+String padFloatNumber(float number, bool padHundreds, char padChar) {
+	String padding = "";
+	if (padHundreds && number < 100) {
+		padding = padding + padChar;
+	}
+
+	if (number < 10) {
+		padding = padding + padChar;
+	}
+
+	return padding + String(number, 1);
+}

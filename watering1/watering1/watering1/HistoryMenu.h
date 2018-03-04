@@ -7,6 +7,7 @@ class HistoryMenu : public DisplayHandler {
 private:
 	char const* menuItems[3] = { "Measurements", "Watering 1", "EXIT" };
 	int itemIndex = 0;
+	int _wateringCount;
 
 	DisplayHandler* _MainMenuLocal = 0;
 	DisplayHandler* _MeasurementRoller = 0;
@@ -22,10 +23,11 @@ private:
 	};
 
 public:
-	HistoryMenu(LiquidCrystal_I2C* lcd, RTC_DS3231* rtc, MainMenu* mainMenu) {
+	HistoryMenu(LiquidCrystal_I2C* lcd, RTC_DS3231* rtc, MainMenu* mainMenu, int wateringCount) {
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
-		_MeasurementRoller = new MeasurementHistoryRoller(lcd, this);
+		_wateringCount = wateringCount;
+		_MeasurementRoller = new MeasurementHistoryRoller(lcd, this, wateringCount);
 		_Watering1Roller = new WateringHistoryRoller(lcd, rtc, this, 0);
 	}
 

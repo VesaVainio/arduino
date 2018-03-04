@@ -4,15 +4,17 @@ class MeasurementHistoryRoller : public DisplayHandler {
 private:
 	int const delayOptions[3] = { 400, 800, 1600 };
 	int delayOptionIndex = 1;
+	int _wateringCount;
 	DisplayHandler* _ParentMenu;
 	LiquidCrystal_I2C* _lcd;
 
 	byte dispMode;
 	unsigned long lcdUpdatedMillis;
 public:
-	MeasurementHistoryRoller(LiquidCrystal_I2C* lcd, DisplayHandler* parentMenu) {
+	MeasurementHistoryRoller(LiquidCrystal_I2C* lcd, DisplayHandler* parentMenu, int wateringCount) {
 		_lcd = lcd;
 		_ParentMenu = parentMenu;
+		_wateringCount = wateringCount;
 	}
 
 	virtual DisplayHandler* button1Pressed() { return _ParentMenu; }
@@ -46,9 +48,12 @@ public:
 					_lcd->print(" ");
 				}
 
-				_lcd->print(String(minutes) + "m " + String(getMinuteSample(0, minuteIndex), 1) + " " + String(getMinuteSample(1, minuteIndex), 1));
+				_lcd->print(String(minutes) + "m  " + padFloatNumber(getMinuteSample(0, minuteIndex), false, ' ') + "   " + padFloatNumber(getMinuteSample(1, minuteIndex), false, ' '));
 				_lcd->setCursor(0, 1);
-				_lcd->print("    " + String(getMinuteSample(2, minuteIndex), 1));
+				_lcd->print("    " + padFloatNumber(getMinuteSample(2, minuteIndex), true, ' '));
+				if (_wateringCount > 1) {
+					_lcd->print("  " + padFloatNumber(getMinuteSample(3, minuteIndex), true, ' '));
+				}
 			}
 			else {
 				int hourIndex = getHourIndex() - 1 - (dispMode - minuteSeriesItems);
@@ -63,9 +68,12 @@ public:
 					_lcd->print(" ");
 				}
 
-				_lcd->print(String(hours) + "h " + String(getHourSample(0, hourIndex), 1) + " " + String(getHourSample(1, hourIndex), 1));
+				_lcd->print(String(hours) + "h  " + padFloatNumber(getHourSample(0, hourIndex), false, ' ') + "   " + padFloatNumber(getHourSample(1, hourIndex), false, ' '));
 				_lcd->setCursor(0, 1);
-				_lcd->print("    " + String(getHourSample(2, hourIndex), 1));
+				_lcd->print("    " + padFloatNumber(getHourSample(2, hourIndex), true, ' '));
+				if (_wateringCount > 1) {
+					_lcd->print("  " + padFloatNumber(getHourSample(3, hourIndex), true, ' '));
+				}
 			}
 
 			dispMode += 1;
