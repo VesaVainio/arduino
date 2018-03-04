@@ -41,13 +41,13 @@ public:
 		unsigned long currentMillis = millis();
 		if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 2000)
 		{
-			_lcd->clear();
 			_lcd->setCursor(0, 0);
 			_lcd->print("tmp    " + String(_measuringContext->getCurrentTemperature()));
 			_lcd->setCursor(10, 0);
 			_lcd->print("hmd    " + String(_measuringContext->getCurrentAirHumidity()));
 			_lcd->setCursor(0, 1);
-			_lcd->print("soil1 " + String(_measuringContext->getCurrentSoil(0)));
+			_lcd->print("soil1 ");
+			padPrintNumberi(_measuringContext->getCurrentSoil(0), true, ' ');
 			_lcd->setCursor(10, 1);
 			_lcd->print("soil2 ");
 			padPrintNumberi(_measuringContext->getCurrentSoil(1), true, ' ');
@@ -69,7 +69,7 @@ public:
 				mode = Stats;
 				DateTime now = _rtc->now();
 				DateTime testTime = DateTime(now.unixtime());
-				_lcd->print("run " + String(currentMillis / (1000 * 60ul * 60ul)) + "h " + String((currentMillis % (1000 * 60ul * 60ul)) / (1000 * 60ul)) + "min");
+				_lcd->print("run " + String(currentMillis / (1000 * 60ul * 60ul)) + "h " + String((currentMillis % (1000 * 60ul * 60ul)) / (1000 * 60ul)) + "min    ");
 				
 				_lcd->setCursor(0, 3);
 				_lcd->print("clock ");
@@ -88,10 +88,13 @@ public:
 		_lcd->print(String(hours));
 		_lcd->print("h  ");
 		padPrintNumberf(getNHoursAvg(0, hours), true, ' ');
+		_lcd->print(" ");
 		_lcd->setCursor(10, 2);
 		padPrintNumberf(getNHoursAvg(1, hours), true, ' ');
-		_lcd->setCursor(4, 3);
+		_lcd->setCursor(0, 3);
+		_lcd->print("    ");
 		padPrintNumberf(getNHoursAvg(2, hours), true, ' ');
+		_lcd->print(" ");
 		_lcd->setCursor(10, 3);
 		padPrintNumberf(getNHoursAvg(3, hours), true, ' ');
 	}
