@@ -31,7 +31,7 @@ public:
 		_MainMenuLocal = mainMenu;
 		_TestPumpMenu = new TestPumpMenu(lcd, this, wateringCount, pinsArray);
 		WateringPins pins1 = pinsArray[0];
-		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, pins1.pumpPwmPin);
+		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, wateringCount, pinsArray);
 	}
 
 	virtual DisplayHandler* button1Pressed() {
