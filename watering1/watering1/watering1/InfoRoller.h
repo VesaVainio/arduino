@@ -46,11 +46,9 @@ public:
 			_lcd->setCursor(10, 0);
 			_lcd->print("hmd    " + String(_measuringContext->getCurrentAirHumidity()));
 			_lcd->setCursor(0, 1);
-			_lcd->print("soil1 ");
-			padPrintNumberi(_measuringContext->getCurrentSoil(0), true, ' ');
+			_lcd->print("soil1 " + padNumberi(_measuringContext->getCurrentSoil(0), true, ' '));
 			_lcd->setCursor(10, 1);
-			_lcd->print("soil2 ");
-			padPrintNumberi(_measuringContext->getCurrentSoil(1), true, ' ');
+			_lcd->print("soil2 " + padNumberi(_measuringContext->getCurrentSoil(1), true, ' '));
 
 			_lcd->setCursor(0, 2);
 
@@ -72,12 +70,7 @@ public:
 				_lcd->print("run " + String(currentMillis / (1000 * 60ul * 60ul)) + "h " + String((currentMillis % (1000 * 60ul * 60ul)) / (1000 * 60ul)) + "min    ");
 				
 				_lcd->setCursor(0, 3);
-				_lcd->print("clock ");
-				padPrintNumberi(testTime.hour(), false, '0');
-				_lcd->print(':');
-				padPrintNumberi(testTime.minute(), false, '0');
-				_lcd->print(':');
-				padPrintNumberi(testTime.second(), false, '0');
+				_lcd->print("clock " + padNumberi(testTime.hour(), false, '0') + ':' + padNumberi(testTime.minute(), false, '0') + ':' + padNumberi(testTime.second(), false, '0') + "  ");
 			}
 
 			lcdUpdatedMillis = currentMillis;
@@ -85,41 +78,38 @@ public:
 	};
 
 	void printForNumHours(int hours) {
-		_lcd->print(String(hours));
-		_lcd->print("h  ");
-		padPrintNumberf(getNHoursAvg(0, hours), true, ' ');
-		_lcd->print(" ");
+		_lcd->print(String(hours) + "h  " + padNumberf(getNHoursAvg(0, hours), true, ' ') + " ");
 		_lcd->setCursor(10, 2);
-		padPrintNumberf(getNHoursAvg(1, hours), true, ' ');
+		_lcd->print(padNumberf(getNHoursAvg(1, hours), true, ' '));
 		_lcd->setCursor(0, 3);
-		_lcd->print("    ");
-		padPrintNumberf(getNHoursAvg(2, hours), true, ' ');
-		_lcd->print(" ");
+		_lcd->print("    " + padNumberf(getNHoursAvg(2, hours), true, ' ') + " ");
 		_lcd->setCursor(10, 3);
-		padPrintNumberf(getNHoursAvg(3, hours), true, ' ');
+		_lcd->print(padNumberf(getNHoursAvg(3, hours), true, ' '));
 	}
 
-	void padPrintNumberi(int number, bool padHundreds, char padChar) {
+	String padNumberi(int number, bool padHundreds, char padChar) {
+		String padding = "";
 		if (padHundreds && number < 100) {
-			_lcd->print(padChar);
+			padding = padding + padChar;
 		}
 		
 		if (number < 10) {
-			_lcd->print(padChar);
+			padding = padding + padChar;
 		}
 
-		_lcd->print(String(number));
+		return padding + String(number);
 	} 
 
-	void padPrintNumberf(float number, bool padHundreds, char padChar) {
+	String padNumberf(float number, bool padHundreds, char padChar) {
+		String padding = "";
 		if (padHundreds && number < 100) {
-			_lcd->print(padChar);
+			padding = padding + padChar;
 		}
 
 		if (number < 10) {
-			_lcd->print(padChar);
+			padding = padding + padChar;
 		}
 
-		_lcd->print(String(number, 1));
+		return padding + String(number, 1);
 	}
 };
