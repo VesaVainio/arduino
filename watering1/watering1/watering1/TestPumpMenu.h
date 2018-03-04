@@ -46,7 +46,6 @@ public:
 		switch (menuIndex) {
 		case 0:
 			pumpTestStart = millis();
-			Serial.println("Starting pump " + String(pumpIndex) + " with power " + String(pumpPower));
 			startPump(wateringPins, pumpIndex, pumpPower);
 			pumpTestRunning = true;
 			break;
