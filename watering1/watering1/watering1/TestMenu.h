@@ -4,10 +4,11 @@
 #include "EepromInterface.h"
 #include "LeadTimeTestMenu.h"
 #include "TestPumpMenu.h"
+#include "TestSensors.h"
 
 class TestMenu : public DisplayHandler {
 private:
-	const char* menuItems[3] = { "TEST PUMP ONCE", "TEST LEAD TIME", "EXIT" };
+	const char* menuItems[4] = { "TEST PUMP ONCE", "TEST LEAD TIME", "TEST SENSORS", "EXIT" };
 	int itemIndex = 0;
 	unsigned long pumpTestStart = 0;
 	bool pumpTestRunning = false;
@@ -15,6 +16,7 @@ private:
 	DisplayHandler* _MainMenuLocal = 0;
 	DisplayHandler* _LeadTimeTestMenu = 0;
 	DisplayHandler* _TestPumpMenu = 0;
+	DisplayHandler* _TestSensors = 0;
 	LiquidCrystal_I2C* _lcd;
 
 	void printMenuOnLcd() {
@@ -26,16 +28,17 @@ private:
 	};
 
 public:
-	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int wateringCount, WateringPins* pinsArray) {
+	TestMenu(LiquidCrystal_I2C* lcd, MainMenu* mainMenu, int wateringCount, WateringPins* pinsArray, MeasuringContext* measuringContext) {
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
 		_TestPumpMenu = new TestPumpMenu(lcd, this, wateringCount, pinsArray);
 		WateringPins pins1 = pinsArray[0];
 		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, wateringCount, pinsArray);
+		_TestSensors = new TestSensors(lcd, this, wateringCount, measuringContext);
 	}
 
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 3;
+		itemIndex = (itemIndex + 1) % 4;
 		printMenuOnLcd();
 		return this;
 	}
@@ -48,6 +51,8 @@ public:
 		case 1:
 			return _LeadTimeTestMenu;
 		case 2:
+			return _TestSensors;
+		case 3:
 			return _MainMenuLocal;
 		}
 		return this;

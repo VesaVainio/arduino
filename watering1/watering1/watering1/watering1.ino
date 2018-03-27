@@ -126,7 +126,7 @@ MainMenu* _MainMenu = new MainMenu();
 InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, measuringContext, _MainMenu);
 HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu, wateringCount);
 SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, wateringCount);
-TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringCount, wateringPins);
+TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringCount, wateringPins, measuringContext);
 
 DisplayHandler* currentHandler;
 
