@@ -1,3 +1,4 @@
+#include <Wire.h>
 #include <Arduino.h>
 
 #include <RTClib.h>
@@ -28,8 +29,8 @@ WateringMode wateringModes[] = { Idle, Idle, Idle, Idle };
 WateringPins wateringPins[] = {
 		{ 24, 25, 0, 38, 5 },
 		{ 34, 35, 1, 39, 5 },
-		{ 0, 0, 0, 0, 0 },
-		{ 0, 0, 0, 0, 0 }
+		{ 46, 47, 2, 42, 6 },
+		{ 50, 51, 3, 43, 6 }
 };
 
 LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
