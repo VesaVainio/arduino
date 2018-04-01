@@ -15,6 +15,7 @@
 #include "HistoryMenu.h"
 #include "SettingsMenu.h"
 #include "TestMenu.h"
+#include "WateringMenu.h"
 #include "Utils.h"
 
 #define DHT11_PIN 4
@@ -128,6 +129,7 @@ InfoRoller* _InfoRoller = new InfoRoller(&lcd, &rtc, measuringContext, _MainMenu
 HistoryMenu* _HistoryMenu = new HistoryMenu(&lcd, &rtc, _MainMenu, wateringCount);
 SettingsMenu* _Settings = new SettingsMenu(&lcd, _MainMenu, &rtc, wateringCount);
 TestMenu* _Test = new TestMenu(&lcd, _MainMenu, wateringCount, wateringPins, measuringContext);
+WateringMenu* _WateringMenu = new WateringMenu(&lcd, _MainMenu, wateringCount, wateringPins, measuringContext);
 
 DisplayHandler* currentHandler;
 
@@ -315,34 +317,39 @@ bool updateWateringForPump(int index, WateringSettings settings, bool pumpRunnin
 }
 
 bool shouldStartWatering(int index, WateringSettings settings, word currentSoil, DateTime now) {
+
+	if (settings.triggerType == MoistureLimit) {
+		if (currentSoil < settings.moistureLimit && !hasPreviousWateringsWithin(index, 24, 2, now)) { // max twice per 24 hours
+			return true;
+		}
+	} else if (settings.triggerType == TimeOfDay) {
+		if (now.hour() == settings.startHour && !hasPreviousWateringsWithin(index, 12, 1, now)) { // max once in the last 12 hours
+			return true;
+		}
+		if (currentSoil < settings.moistureLimit && !hasPreviousWateringsWithin(index, 24, 2, now)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool hasPreviousWateringsWithin(int index, int hours, int maxCount, DateTime now) {
 	int recordIndex = getWateringRecordIndex(index);
 	int recentCount = 0;
-	unsigned long unixTimeDayAgo = now.unixtime() - 24 * 60 * 60;
-	for (int i = 0; i < 2; i++) {
+	unsigned long unixTimeDayAgo = now.unixtime() - hours * 60 * 60;
+	for (int i = 0; i < maxCount; i++) {
 		WateringRecord oldRecord = getWateringRecord(index, recordIndex);
 		if (oldRecord.time > unixTimeDayAgo) {
 			recentCount++;
-			if (recentCount == 2) {
-				Serial.println("Pump " + String(index) + " already has 2 watering in last 24 hours");
-				return false;
+			if (recentCount == maxCount) {
+				Serial.println("Pump " + String(index) + " already has " + String(recentCount) + " waterings in last " + String(hours) + " hours");
+				return true;
 			}
 		}
 		recordIndex--;
 		if (recordIndex < 0) {
 			recordIndex = wateringSeriesItems - 1;
-		}
-	}
-
-	if (settings.triggerType == MoistureLimit) {
-		if (currentSoil < settings.moistureLimit) {
-			return true;
-		}
-	} else {
-		if (now.hour() == settings.startHour && currentSoil < settings.moistureLimit) {
-			return true;
-		}
-		if (currentSoil < settings.emergencyLimit) {
-			return true;
 		}
 	}
 
@@ -463,7 +470,7 @@ void setup()
 
 	measuringContext->setMoistureInterval(15000);
 
-	_MainMenu->Init(&lcd, _InfoRoller, _HistoryMenu, _Settings, _Test);
+	_MainMenu->Init(&lcd, _InfoRoller, _HistoryMenu, _Settings, _Test, _WateringMenu);
 	currentHandler = _InfoRoller;
 
 	Serial.println("Done");

@@ -25,9 +25,19 @@ enum WateringResult : byte {
 	MoistureNotIncreased
 };
 
+/* Trigger types:
+ * MoistureLimit - starts watering when ever measured moisture level goes below a set limit
+ * TimeOfDay     - starts watering always at a given time of day (may also specify an "emergency level" to start watering at any time, if moisture level goes below this level
+ * Manual        - starts watering only manually
+ */
 enum TriggerType : byte {
 	MoistureLimit,
-	TimeOfDay
+	TimeOfDay,
+	Manual
+};
+
+enum AmountMethod : byte {
+	Automatic
 };
 
 // Results of watering
@@ -46,9 +56,7 @@ struct WateringRecord // 11 bytes
 struct WateringSettings // 16 bytes
 {
 	word moistureLimit; // moisture limit for starting watering
-	word emergencyLimit; // moisture limit for starting watering at any time in TimeOfDay trigger mode
 	word potSqCm; // cm^2 of the pot, used to calculate the initial baseAmount
-	byte growthFactor; // how much should the baseAmount increase per 24h as per assumed growth of the plant (may be corrected for temp)
 	byte adjustPercentage; // manual adjustment of watering amount, 100 = 100% = 1
 	byte pumpPower; // the pump power for PWM, doesn't affect amounts (adjusted for different pump types, lift height etc)
 	byte startHour;
@@ -57,12 +65,11 @@ struct WateringSettings // 16 bytes
 	byte doses;
 	bool enabled;
 	TriggerType triggerType;
+	AmountMethod amountMethod;
 
 	WateringSettings() {
 		moistureLimit = 200;
-		emergencyLimit = 140;
 		potSqCm = 75;
-		growthFactor = 0;
 		adjustPercentage = 100;
 		pumpPower = 60;
 		startHour = 19;
@@ -70,7 +77,8 @@ struct WateringSettings // 16 bytes
 		leadPower = 255;
 		doses = 3;
 		enabled = false;
-		triggerType = MoistureLimit;
+		triggerType = Manual;
+		amountMethod = Automatic;
 	}
 };
 
@@ -100,11 +108,4 @@ struct WateringPins
 	byte moistureAnalog;
 	byte pumpOnOffPin;
 	byte pumpPwmPin;
-
-/*	WateringPins() {
-		moisturePin1 = 0;
-		moisturePin2 = 0;
-		pumpEnablePin = 0;
-		pumpPwmPin = 0;
-	}*/
 };

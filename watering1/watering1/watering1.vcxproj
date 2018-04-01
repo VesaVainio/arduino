@@ -84,6 +84,7 @@
     <ClInclude Include="watering1\LeadTimeTestMenu.h" />
     <ClInclude Include="watering1\LeadTimeTestRunner.h" />
     <ClInclude Include="watering1\MainMenu.h" />
+    <ClInclude Include="watering1\ManualWateringMenu.h" />
     <ClInclude Include="watering1\MeasurementHistoryRoller.h" />
     <ClInclude Include="watering1\MeasuringContext.h" />
     <ClInclude Include="watering1\ResetMenu.h" />
@@ -91,9 +92,11 @@
     <ClInclude Include="watering1\TestMenu.h" />
     <ClInclude Include="watering1\TestPumpMenu.h" />
     <ClInclude Include="watering1\TestSensors.h" />
+    <ClInclude Include="watering1\TriggerWateringMenu.h" />
     <ClInclude Include="watering1\Types.h" />
     <ClInclude Include="watering1\Utils.h" />
     <ClInclude Include="watering1\WateringHistoryRoller.h" />
+    <ClInclude Include="watering1\WateringMenu.h" />
     <ClInclude Include="watering1\WateringSettingsMenu.h" />
     <ClInclude Include="__vm\.watering1.vsarduino.h" />
   </ItemGroup>

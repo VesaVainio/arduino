@@ -1,10 +1,13 @@
 #pragma once
 
 #include "EepromInterface.h"
+#include "Types.h"
 
 class WateringSettingsMenu : public DisplayHandler {
 private:
-	char const* menuItems[9] = { "ENABLED", "MOIST LIMIT", "POT CM2", "GROWTH", "ADJUST %", "PUMP POWER", "LEAD TIME", "HOUR", "EXIT" };
+	char const* menuItems[9] = { "ENABLED", "MOIST LIMIT", "POT CM2", "TRIGGER", "ADJUST %", "PUMP POWER", "LEAD TIME", "HOUR", "EXIT" };
+	char const* triggerTypeOptions[3] = { "Moist limit", "Time of day", "Manual" };
+
 	int itemIndex = 0;
 
 	DisplayHandler* _SettingsMenuLocal = 0;
@@ -32,7 +35,7 @@ private:
 			_lcd->print(getWateringSettings(wateringSeries).potSqCm);
 			break;
 		case 3:
-			_lcd->print(getWateringSettings(wateringSeries).growthFactor);
+			_lcd->print(triggerTypeOptions[getWateringSettings(wateringSeries).triggerType]);
 			break;
 		case 4:
 			_lcd->print(getWateringSettings(wateringSeries).adjustPercentage);
@@ -75,7 +78,7 @@ public:
 			settings.potSqCm = increaseSetting(75, 1000, 25, settings.potSqCm);
 			break;
 		case 3:
-			settings.growthFactor = increaseSetting(0, 200, 10, settings.growthFactor);
+			settings.triggerType = static_cast<TriggerType>((((byte)settings.triggerType) + 1) % 3);
 			break;
 		case 4:
 			settings.adjustPercentage = increaseSetting(25, 200, 5, settings.adjustPercentage);
@@ -112,7 +115,7 @@ public:
 			settings.potSqCm = decreaseSetting(75, 1000, 25, settings.potSqCm);
 			break;
 		case 3:
-			settings.growthFactor = decreaseSetting(0, 200, 10, settings.growthFactor);
+			settings.triggerType = static_cast<TriggerType>((((byte)settings.triggerType) - 1) >= 0 ? (((byte)settings.triggerType) - 1) : 2);
 			break;
 		case 4:
 			settings.adjustPercentage = decreaseSetting(25, 200, 5, settings.adjustPercentage);

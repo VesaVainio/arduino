@@ -2,13 +2,14 @@
 
 class MainMenu : public DisplayHandler {
 private:
-	char const* menuItems[4] = { "HISTORY", "SETTINGS", "TEST", "EXIT" };
+	char const* menuItems[5] = { "HISTORY", "SETTINGS", "TEST", "WATERING", "EXIT" };
 	int itemIndex = 0;
 
 	DisplayHandler* _InfoRollerLocal = 0;
 	DisplayHandler* _HistoryMenuLocal = 0;
 	DisplayHandler* _SettingsLocal = 0;
 	DisplayHandler* _TestLocal = 0;
+	DisplayHandler* _WateringMenuLocal = 0;
 
 	LiquidCrystal_I2C* _lcd;
 
@@ -22,7 +23,7 @@ private:
 
 public:
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 4;
+		itemIndex = (itemIndex + 1) % 5;
 		printMenuOnLcd();
 		return this;
 	};
@@ -36,6 +37,8 @@ public:
 		case 2:
 			return _TestLocal;
 		case 3:
+			return _WateringMenuLocal;
+		case 4:
 			return _InfoRollerLocal;
 		}
 
@@ -48,11 +51,12 @@ public:
 
 	virtual void updateLcd() { };
 
-	void Init(LiquidCrystal_I2C* lcd, DisplayHandler* infoRoller, DisplayHandler* historyMenu, DisplayHandler* settings, DisplayHandler* test) {
+	void Init(LiquidCrystal_I2C* lcd, DisplayHandler* infoRoller, DisplayHandler* historyMenu, DisplayHandler* settings, DisplayHandler* test, DisplayHandler* wateringMenu) {
 		_lcd = lcd;
 		_InfoRollerLocal = infoRoller;
 		_HistoryMenuLocal = historyMenu;
 		_SettingsLocal = settings;
 		_TestLocal = test;
+		_WateringMenuLocal = wateringMenu;
 	}
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include "EepromInterface.h"
 #include "LeadTimeTestMenu.h"
 #include "TestPumpMenu.h"
 #include "TestSensors.h"
@@ -32,7 +31,6 @@ public:
 		_lcd = lcd;
 		_MainMenuLocal = mainMenu;
 		_TestPumpMenu = new TestPumpMenu(lcd, this, wateringCount, pinsArray);
-		WateringPins pins1 = pinsArray[0];
 		_LeadTimeTestMenu = new LeadTimeTestMenu(lcd, this, wateringCount, pinsArray);
 		_TestSensors = new TestSensors(lcd, this, wateringCount, measuringContext);
 	}
@@ -44,7 +42,6 @@ public:
 	}
 
 	virtual DisplayHandler* button2Pressed() {
-		int pump1Power = getWateringSettings(0).pumpPower;
 		switch (itemIndex) {
 		case 0:
 			return _TestPumpMenu;
