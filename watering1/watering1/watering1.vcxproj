@@ -95,6 +95,7 @@
     <ClInclude Include="watering1\TriggerWateringMenu.h" />
     <ClInclude Include="watering1\Types.h" />
     <ClInclude Include="watering1\Utils.h" />
+    <ClInclude Include="watering1\WateringContext.h" />
     <ClInclude Include="watering1\WateringHistoryRoller.h" />
     <ClInclude Include="watering1\WateringMenu.h" />
     <ClInclude Include="watering1\WateringSettingsMenu.h" />
@@ -102,6 +103,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="watering1\EepromInterface.cpp" />
+    <ClCompile Include="watering1\Utils.cpp" />
+    <ClCompile Include="watering1\WateringContext.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="watering1\watering1.ino" />

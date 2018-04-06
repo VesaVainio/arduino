@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <dht.h>
 
 class MeasuringContext
 {
@@ -51,7 +52,7 @@ public:
 			digitalWrite(wateringPins[index].moisturePin2, LOW);
 			moistureUpdatedMillis[index] = currentMillis;
 		}
-		else if (moistureReadingState == 1 && currentMillis > moistureUpdatedMillis + 100)
+		else if (moistureReadingState == 1 && currentMillis > moistureUpdatedMillis[index] + 100)
 		{
 			moistureReadingState = 2;
 			currentSoilValues[index] = analogRead(wateringPins[index].moistureAnalog); // actually get the reading
@@ -60,7 +61,7 @@ public:
 			digitalWrite(wateringPins[index].moisturePin2, HIGH);
 			moistureUpdatedMillis[index] = currentMillis;
 		}
-		else if (moistureReadingState == 2 && currentMillis > moistureUpdatedMillis + 100)
+		else if (moistureReadingState == 2 && currentMillis > moistureUpdatedMillis[index] + 100)
 		{
 			moistureReadingState = 0;
 			digitalWrite(wateringPins[index].moisturePin1, LOW);

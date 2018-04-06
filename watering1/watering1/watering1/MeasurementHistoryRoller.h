@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils.h"
+
 class MeasurementHistoryRoller : public DisplayHandler {
 private:
 	int const delayOptions[3] = { 400, 800, 1600 };
