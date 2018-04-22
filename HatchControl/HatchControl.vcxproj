@@ -85,6 +85,7 @@
     <ClInclude Include="InfoDisplay.h" />
     <ClInclude Include="MeasuringContext.h" />
     <ClInclude Include="TestMenu.h" />
+    <ClInclude Include="Types.h" />
     <ClInclude Include="__vm\.HatchControl.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>

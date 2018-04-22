@@ -31,6 +31,10 @@ TestMenu* _TestMenu = new TestMenu(&lcd, _InfoDisplay, MOTOR_ENABLE_PIN, MOTOR_U
 
 DisplayHandler* currentHandler = _InfoDisplay;
 
+unsigned long nextHourFull = 60 * 60 * 1000;
+HourInfo currentHour;
+HourInfo summary12h;
+
 unsigned long buttonUpdatedMillis = 0;
 
 int button1State = LOW;
@@ -82,6 +86,19 @@ void updateButtonsWithDebounce()
 
 unsigned long hatchChangedMillis = 0;
 
+void hatchMoveCommon(int pin, int newPosition) {
+	digitalWrite(MOTOR_ENABLE_PIN, HIGH);
+	digitalWrite(pin, HIGH);
+	delay(1500);
+	digitalWrite(MOTOR_ENABLE_PIN, LOW);
+	digitalWrite(pin, LOW);
+	putHatchPosition(newPosition);
+	hatchChangedMillis = millis();
+	currentHandler->activate();
+	currentHour.updateHatch(newPosition);
+	currentHour.addMove();
+}
+
 void updateHatch() {
 	unsigned long currentMillis = millis();
 	int hatchPosition = getHatchPosition();
@@ -90,26 +107,12 @@ void updateHatch() {
 		if (currentTemp > 27 && hatchPosition < 5) {
 			lcd.clear();
 			lcd.print("Raising to " + String(hatchPosition + 1) + "/5");
-			digitalWrite(MOTOR_ENABLE_PIN, HIGH);
-			digitalWrite(MOTOR_UP_PIN, HIGH);
-			delay(1500);
-			digitalWrite(MOTOR_ENABLE_PIN, LOW);
-			digitalWrite(MOTOR_UP_PIN, LOW);
-			putHatchPosition(hatchPosition + 1);
-			hatchChangedMillis = currentMillis;
-			currentHandler->activate();
+			hatchMoveCommon(MOTOR_UP_PIN, hatchPosition + 1);
 		}
 		else if (currentTemp < 24 && hatchPosition > 0) {
 			lcd.clear();
 			lcd.print("Lowering to " + String(hatchPosition - 1) + "/5");
-			digitalWrite(MOTOR_ENABLE_PIN, HIGH);
-			digitalWrite(MOTOR_DOWN_PIN, HIGH);
-			delay(1500);
-			digitalWrite(MOTOR_ENABLE_PIN, LOW);
-			digitalWrite(MOTOR_DOWN_PIN, LOW);
-			putHatchPosition(hatchPosition - 1);
-			hatchChangedMillis = currentMillis;
-			currentHandler->activate();
+			hatchMoveCommon(MOTOR_DOWN_PIN, hatchPosition - 1);
 		}
 	}
 }
@@ -141,16 +144,80 @@ void setup()
 
 	_InfoDisplay->Init(_TestMenu);
 
+	bool dhtError = measuringContext->updateDht(DHT, DHT11_PIN);
+	int hatch = getHatchPosition();
+
+	if (!dhtError) {
+		int temp = measuringContext->getCurrentTemperature();
+		currentHour = HourInfo(temp, hatch);
+	}
+	else {
+		currentHour = HourInfo(0, hatch);
+		Serial.println("DHT error during setup!");
+	}
+
+	updateSummary(getHourIndex());
+
 	Serial.println("Setup done");
+}
+
+void updateSummary(int index) {
+	summary12h = currentHour;
+
+	for (int i = 0; i < 12; i++) {
+		index -= 1;
+		if (index < 0) {
+			index = hourCount - 1;
+		}
+		HourInfo info = getHourInfo(index);
+		if (info.maxTemp > summary12h.maxTemp) {
+			summary12h.maxTemp = info.maxTemp;
+		}
+		if (info.minTemp < summary12h.minTemp) {
+			summary12h.minTemp = info.minTemp;
+		}
+		if (info.maxHatch > summary12h.maxHatch) {
+			summary12h.maxHatch = info.maxHatch;
+		}
+		if (info.minHatch < summary12h.minHatch) {
+			summary12h.minHatch = info.minHatch;
+		}
+		summary12h.hatchMoves += info.hatchMoves;
+	}
+
+	_InfoDisplay->updateSummary(summary12h);
+}
+
+void updateHourInfo() {
+	unsigned long currentMillis = millis();
+	if (currentMillis > nextHourFull) {
+		int index = getHourIndex();
+		putHourInfo(index, currentHour);
+
+		index += 1;
+		if (index >= hourCount) {
+			index = 0;
+		}
+		putHourIndex(index);
+
+		currentHour = HourInfo(measuringContext->getCurrentTemperature(), getHatchPosition());
+
+		nextHourFull += 60 * 60 * 1000;
+	}
 }
 
 void loop()
 {
 	bool dhtError = measuringContext->updateDht(DHT, DHT11_PIN);
+	if (!dhtError) {
+		currentHour.updateTemp(measuringContext->getCurrentTemperature());
+	}
 
 	updateButtonsWithDebounce();
 
 	updateHatch();
+
+	updateHourInfo();
 
 	currentHandler->updateLcd();
 
