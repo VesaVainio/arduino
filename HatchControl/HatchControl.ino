@@ -12,6 +12,9 @@
 #include "InfoDisplay.h"
 #include "TestMenu.h"
 #include "EepromInterface.h"
+#include "MainMenu.h"
+#include "HistoryRoller.h"
+#include "SettingsMenu.h"
 
 #define MOTOR_ENABLE_PIN 2
 #define MOTOR_UP_PIN 3
@@ -19,6 +22,7 @@
 
 #define BUTTON1_PIN 8
 #define BUTTON2_PIN 9
+#define BUTTON3_PIN 10
 
 #define DHT11_PIN 11
 
@@ -26,8 +30,11 @@ LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 dht DHT;
 MeasuringContext* measuringContext = new MeasuringContext();
 
-InfoDisplay* _InfoDisplay = new InfoDisplay(&lcd, measuringContext);
-TestMenu* _TestMenu = new TestMenu(&lcd, _InfoDisplay, MOTOR_ENABLE_PIN, MOTOR_UP_PIN, MOTOR_DOWN_PIN);
+MainMenu* _MainMenu = new MainMenu();
+InfoDisplay* _InfoDisplay = new InfoDisplay(&lcd, measuringContext, _MainMenu);
+HistoryRoller* _HistoryMenu = new HistoryRoller(&lcd, _MainMenu);
+SettingsMenu* _SettingsMenu = new SettingsMenu(&lcd, _MainMenu);
+TestMenu* _TestMenu = new TestMenu(&lcd, _MainMenu, MOTOR_ENABLE_PIN, MOTOR_UP_PIN, MOTOR_DOWN_PIN);
 
 DisplayHandler* currentHandler = _InfoDisplay;
 
@@ -39,16 +46,23 @@ unsigned long buttonUpdatedMillis = 0;
 
 int button1State = LOW;
 int button2State = LOW;
+int button3State = LOW;
 bool buttonStateChanging = false;
+
+bool backlightOn = true;
+
+unsigned long hatchChangedMillis = 0;
 
 
 void updateButtonsWithDebounce()
 {
 	int button1NewState = digitalRead(BUTTON1_PIN);
 	int button2NewState = digitalRead(BUTTON2_PIN);
+	int button3NewState = digitalRead(BUTTON3_PIN);
 
 	unsigned long currentMillis = millis();
-	if (buttonStateChanging == false && (button1NewState != button1State || button2NewState != button2State))
+	if (buttonStateChanging == false && (button1NewState != button1State || button2NewState != button2State ||
+		button3NewState != button3State))
 	{
 		buttonUpdatedMillis = currentMillis;
 		buttonStateChanging = true;
@@ -58,18 +72,25 @@ void updateButtonsWithDebounce()
 		DisplayHandler* oldCurrentHandler = currentHandler;
 		DisplayHandler* newCurrentHandler;
 		bool buttonPressed = false;
-		 
+
 		if (button1State == LOW && button1NewState == HIGH)
 		{
-			Serial.println("1 pressed at " + String(currentMillis));
+			Serial.println("1 pressed");
 			newCurrentHandler = currentHandler->button1Pressed();
 			buttonPressed = true;
 		}
 
 		if (button2State == LOW && button2NewState == HIGH)
 		{
-			Serial.println("2 pressed at " + String(currentMillis));
+			Serial.println("2 pressed");
 			newCurrentHandler = currentHandler->button2Pressed();
+			buttonPressed = true;
+		}
+
+		if (button3State == LOW && button3NewState == HIGH)
+		{
+			Serial.println("3 pressed");
+			newCurrentHandler = currentHandler->button3Pressed();
 			buttonPressed = true;
 		}
 
@@ -80,16 +101,40 @@ void updateButtonsWithDebounce()
 
 		button1State = button1NewState;
 		button2State = button2NewState;
+		button3State = button3NewState;
 		buttonStateChanging = false;
 	}
 }
 
-unsigned long hatchChangedMillis = 0;
+void updateBacklight() {
+	Settings settings = getSettings();
+	BacklightMode backlightMode = settings.backlightMode;
 
-void hatchMoveCommon(int pin, int newPosition) {
+	if (backlightMode == On && backlightOn == false) {
+		lcd.backlight();
+		backlightOn = true;
+	}
+	else if (backlightMode == Off && backlightOn == true) {
+		lcd.noBacklight();
+		backlightOn = false;
+	}
+	else if (backlightMode == Auto) {
+		unsigned long currentMillis = millis();
+		if (currentMillis < buttonUpdatedMillis + 30000 && backlightOn == false) {
+			lcd.backlight();
+			backlightOn = true;
+		}
+		else if (currentMillis > buttonUpdatedMillis + 30000 && backlightOn == true) {
+			lcd.noBacklight();
+			backlightOn = false;
+		}
+	}
+}
+
+void hatchMoveCommon(int pin, int newPosition, int time) {
 	digitalWrite(MOTOR_ENABLE_PIN, HIGH);
 	digitalWrite(pin, HIGH);
-	delay(1500);
+	delay(time);
 	digitalWrite(MOTOR_ENABLE_PIN, LOW);
 	digitalWrite(pin, LOW);
 	putHatchPosition(newPosition);
@@ -103,16 +148,22 @@ void updateHatch() {
 	unsigned long currentMillis = millis();
 	int hatchPosition = getHatchPosition();
 	int currentTemp = measuringContext->getCurrentTemperature();
+	Settings settings = getSettings();
+	
+	if (!settings.enabled) {
+		return;
+	}
+	
 	if (currentMillis > hatchChangedMillis + 3 * 60 * 1000) {
 		if (currentTemp > 27 && hatchPosition < 5) {
 			lcd.clear();
 			lcd.print("Raising to " + String(hatchPosition + 1) + "/5");
-			hatchMoveCommon(MOTOR_UP_PIN, hatchPosition + 1);
+			hatchMoveCommon(MOTOR_UP_PIN, hatchPosition + 1, settings.stepTimeUp);
 		}
 		else if (currentTemp < 24 && hatchPosition > 0) {
 			lcd.clear();
 			lcd.print("Lowering to " + String(hatchPosition - 1) + "/5");
-			hatchMoveCommon(MOTOR_DOWN_PIN, hatchPosition - 1);
+			hatchMoveCommon(MOTOR_DOWN_PIN, hatchPosition - 1, settings.stepTimeDown);
 		}
 	}
 }
@@ -142,7 +193,7 @@ void setup()
 		delay(250);
 	}
 
-	_InfoDisplay->Init(_TestMenu);
+	_MainMenu->Init(&lcd, _InfoDisplay, _HistoryMenu, _SettingsMenu, _TestMenu);
 
 	bool dhtError = measuringContext->updateDht(DHT, DHT11_PIN);
 	int hatch = getHatchPosition();

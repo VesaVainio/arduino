@@ -5,13 +5,14 @@
 
 class TestMenu : public DisplayHandler {
 private:
-	const char* menuItems[3] = { "TEST UP", "TEST DOWN", "EXIT" };
+	const char* menuItems[5] = { "TEST UP", "TEST DOWN", "Calibrate up", "Calibrate down", "EXIT" };
 	int itemIndex = 0;
 	unsigned long motorTestStart = 0;
 	bool motorTestRunning = false;
 
-	DisplayHandler* _InfoDisplay = 0;
+	DisplayHandler* _ParentDisplay = 0;
 	LiquidCrystal_I2C* _lcd;
+	int timeToRun = 0;
 
 	int _enable;
 	int _motorUp;
@@ -35,28 +36,30 @@ private:
 	}
 
 public:
-	TestMenu(LiquidCrystal_I2C* lcd, DisplayHandler* InfoDisplay, int enable, int motorUp, int motorDown) {
+	TestMenu(LiquidCrystal_I2C* lcd, DisplayHandler* ParentDisplay, int enable, int motorUp, int motorDown) {
 		_lcd = lcd;
-		_InfoDisplay = InfoDisplay;
+		_ParentDisplay = ParentDisplay;
 		_enable = enable;
 		_motorUp = motorUp;
 		_motorDown = motorDown;
 	}
 
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 3;
+		itemIndex = (itemIndex + 1) % 5;
 		printMenuOnLcd();
 		return this;
 	}
 
 	virtual DisplayHandler* button2Pressed() {
 		int hatchPosition = getHatchPosition();
+		Settings settings = getSettings();
 		switch (itemIndex) {
 		case 0:
 			if (hatchPosition < 5) {
 				startTestCommon();
 				_lcd->print("TEST UP");
 				digitalWrite(_motorUp, HIGH);
+				timeToRun = settings.stepTimeUp;
 				putHatchPosition(hatchPosition + 1);
 			}
 			return this;
@@ -65,11 +68,27 @@ public:
 				startTestCommon();
 				_lcd->print("TEST DOWN");
 				digitalWrite(_motorDown, HIGH);
+				timeToRun = settings.stepTimeDown; 
 				putHatchPosition(hatchPosition - 1);
 			}
 			return this;
 		case 2:
-			return _InfoDisplay;
+			digitalWrite(_motorUp, HIGH);
+			digitalWrite(_enable, HIGH);
+			delay(200);
+			digitalWrite(_motorUp, LOW);
+			digitalWrite(_enable, LOW);
+			return this;
+		case 3:
+			digitalWrite(_motorDown, HIGH);
+			digitalWrite(_enable, HIGH);
+			delay(200);
+			digitalWrite(_motorDown, LOW);
+			digitalWrite(_enable, LOW);
+			return this;
+		case 4:
+
+			return _ParentDisplay;
 		}
 		return this;
 	}

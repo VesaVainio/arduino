@@ -2,34 +2,22 @@
 
 #include "Types.h"
 #include "EepromInterface.h"
+#include "Utils.h"
 
 class InfoDisplay : public DisplayHandler {
 private:
 	LiquidCrystal_I2C * _lcd;
 	MeasuringContext* _measuringContext = 0;
-	DisplayHandler* _testMenu = 0;
+	DisplayHandler* _MainMenu = 0;
 	unsigned long lcdUpdatedMillis;
 	HourInfo summary;
 
-	String padIntNumber(int number) {
-		String padding = "";
-
-		if (number < 10) {
-			padding = padding + ' ';
-		}
-
-		return padding + String(number);
-	}
-
 public:
-	InfoDisplay(LiquidCrystal_I2C* lcd, MeasuringContext* measuringContext) {
+	InfoDisplay(LiquidCrystal_I2C* lcd, MeasuringContext* measuringContext, DisplayHandler* mainMenu) {
 		_lcd = lcd;
 		_measuringContext = measuringContext;
+		_MainMenu = mainMenu;
 		lcdUpdatedMillis = 0;
-	}
-
-	virtual void Init(DisplayHandler* testMenu) {
-		_testMenu = testMenu;
 	}
 
 	virtual void activate() {
@@ -38,7 +26,7 @@ public:
 	};
 
 	virtual DisplayHandler* button1Pressed() {
-		return _testMenu;
+		return _MainMenu;
 	}
 
 	virtual void updateLcd() {

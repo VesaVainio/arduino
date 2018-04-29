@@ -82,14 +82,19 @@
   <ItemGroup>
     <ClInclude Include="DisplayHandler.h" />
     <ClInclude Include="EepromInterface.h" />
+    <ClInclude Include="HistoryRoller.h" />
     <ClInclude Include="InfoDisplay.h" />
+    <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MeasuringContext.h" />
+    <ClInclude Include="SettingsMenu.h" />
     <ClInclude Include="TestMenu.h" />
     <ClInclude Include="Types.h" />
+    <ClInclude Include="Utils.h" />
     <ClInclude Include="__vm\.HatchControl.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EepromInterface.cpp" />
+    <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <PropertyGroup>
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>

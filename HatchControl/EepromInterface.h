@@ -13,3 +13,6 @@ byte getHourIndex();
 
 void putHourInfo(byte index, HourInfo info);
 HourInfo getHourInfo(byte index);
+
+void putSettings(Settings settings);
+Settings getSettings();

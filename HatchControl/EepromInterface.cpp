@@ -34,3 +34,13 @@ HourInfo getHourInfo(byte index) {
 	EEPROM.get(hourInfoStart + index * hourInfoBytes, info);
 	return info;
 }
+
+void putSettings(Settings settings) {
+	EEPROM.put(100, settings);
+}
+
+Settings getSettings() {
+	Settings settings;
+	EEPROM.get(100, settings);
+	return settings;
+}

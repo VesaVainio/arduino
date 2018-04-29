@@ -2,6 +2,12 @@
 
 #include <Arduino.h>
 
+enum BacklightMode : byte {
+	Off = 0,
+	Auto = 1,
+	On = 2
+};
+
 struct HourInfo
 {
 	byte maxTemp;
@@ -41,4 +47,14 @@ struct HourInfo
 	void addMove() {
 		hatchMoves += 1;
 	}
+};
+
+struct Settings
+{
+	bool enabled;
+	BacklightMode backlightMode;
+	byte tempLowLimit;
+	byte tempHighLimit;
+	int stepTimeUp;
+	int stepTimeDown;
 };
