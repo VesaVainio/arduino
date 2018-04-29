@@ -203,6 +203,7 @@ void updateHourInfo() {
 		currentHour = HourInfo(measuringContext->getCurrentTemperature(), getHatchPosition());
 
 		nextHourFull += 60 * 60 * 1000;
+		updateSummary(index);
 	}
 }
 
