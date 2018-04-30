@@ -57,4 +57,5 @@ struct Settings
 	byte tempHighLimit;
 	int stepTimeUp;
 	int stepTimeDown;
+	int pauseSeconds;
 };

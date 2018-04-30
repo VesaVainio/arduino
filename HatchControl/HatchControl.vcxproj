@@ -82,6 +82,7 @@
   <ItemGroup>
     <ClInclude Include="DisplayHandler.h" />
     <ClInclude Include="EepromInterface.h" />
+    <ClInclude Include="HatchContext.h" />
     <ClInclude Include="HistoryRoller.h" />
     <ClInclude Include="InfoDisplay.h" />
     <ClInclude Include="MainMenu.h" />

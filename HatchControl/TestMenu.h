@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "EepromInterface.h"
+#include "HatchContext.h"
 
 class TestMenu : public DisplayHandler {
 private:
@@ -12,6 +13,8 @@ private:
 
 	DisplayHandler* _ParentDisplay = 0;
 	LiquidCrystal_I2C* _lcd;
+	HatchContext* _hatchContext = 0;
+
 	int timeToRun = 0;
 
 	int _enable;
@@ -30,15 +33,17 @@ private:
 
 	void startTestCommon() {
 		motorTestStart = millis();
+		_hatchContext->HatchChangedMillis = motorTestStart;
 		motorTestRunning = true;
 		digitalWrite(_enable, HIGH);
 		_lcd->clear();
 	}
 
 public:
-	TestMenu(LiquidCrystal_I2C* lcd, DisplayHandler* ParentDisplay, int enable, int motorUp, int motorDown) {
+	TestMenu(LiquidCrystal_I2C* lcd, DisplayHandler* ParentDisplay, HatchContext* hatchContext, int enable, int motorUp, int motorDown) {
 		_lcd = lcd;
 		_ParentDisplay = ParentDisplay;
+		_hatchContext = hatchContext;
 		_enable = enable;
 		_motorUp = motorUp;
 		_motorDown = motorDown;
@@ -102,7 +107,7 @@ public:
 			unsigned long runningTime = millis() - motorTestStart;
 			_lcd->setCursor(10, 0);
 			_lcd->print(String(runningTime));
-			if (runningTime > 1500) {
+			if (runningTime > timeToRun) {
 				digitalWrite(_enable, LOW);
 				digitalWrite(_motorUp, LOW);
 				digitalWrite(_motorDown, LOW);

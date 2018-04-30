@@ -5,7 +5,7 @@
 
 class SettingsMenu : public DisplayHandler {
 private:
-	char const* menuItems[8] = { "ENABLED", "BACKLIGHT", "TEMP LOW LIMIT", "TEMP HIGH LIMIT", "STEP TIME UP", "STEP TIME DOWN", "RESET SETTINGS", "EXIT" };
+	char const* menuItems[9] = { "ENABLED", "BACKLIGHT", "TEMP LOW LIMIT", "TEMP HIGH LIMIT", "STEP TIME UP", "STEP TIME DOWN", "PAUSE SECONDS", "RESET SETTINGS", "EXIT" };
 	char const* backlightOptions[3] = { "OFF", "AUTO", "ON" };
 
 	int itemIndex = 0;
@@ -43,6 +43,9 @@ private:
 		case 5:
 			_lcd->print(settings.stepTimeDown);
 			break;
+		case 6:
+			_lcd->print(settings.pauseSeconds);
+			break;
 		}
 	};
 
@@ -53,7 +56,7 @@ public:
 	}
 
 	virtual DisplayHandler* button1Pressed() {
-		itemIndex = (itemIndex + 1) % 8;
+		itemIndex = (itemIndex + 1) % 9;
 		printMenuOnLcd();
 		resetConfirms = 0;
 		return this;
@@ -82,10 +85,14 @@ public:
 			settings.stepTimeDown = increaseSetting(500, 3000, 100, settings.stepTimeDown);
 			break;
 		case 6:
+			settings.pauseSeconds = increaseSetting(10, 600, 10, settings.pauseSeconds);
+			break;
+		case 7:
 			if (resetConfirms < 3) {
 				resetConfirms++;
 				_lcd->setCursor(0, 3);
-				_lcd->print("Press again " + String(3 - resetConfirms) + " times");
+				_lcd->print("Press again " + String(4 - resetConfirms) + " times");
+				return this;
 			}
 			else {
 				settings.enabled = true;
@@ -94,9 +101,13 @@ public:
 				settings.tempHighLimit = 28;
 				settings.stepTimeUp = 2000;
 				settings.stepTimeDown = 1000;
+				settings.pauseSeconds = 180;
+				_lcd->setCursor(0, 3);
+				_lcd->print("Settings reset done");
+				delay(1000);
 			}
-			
-		case 7:
+			break;
+		case 8:
 			return _MainMenuLocal;
 		}
 
@@ -128,6 +139,9 @@ public:
 			settings.stepTimeDown = decreaseSetting(500, 3000, 100, settings.stepTimeDown);
 			break;
 		case 6:
+			settings.pauseSeconds = decreaseSetting(10, 600, 10, settings.pauseSeconds);
+			break;
+		case 8:
 			return _MainMenuLocal;
 		}
 

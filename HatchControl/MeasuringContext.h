@@ -37,7 +37,6 @@ public:
 			else {
 				currentTemperature = DHT.temperature;
 				currentHumidity = DHT.humidity;
-				//Serial.println("Temp " + String(currentTemperature) + " humid " + String(currentHumidity));
 			}
 			dhtUpdatedMillis = currentMillis;
 		}

@@ -15,6 +15,7 @@
 #include "MainMenu.h"
 #include "HistoryRoller.h"
 #include "SettingsMenu.h"
+#include "HatchContext.h"
 
 #define MOTOR_ENABLE_PIN 2
 #define MOTOR_UP_PIN 3
@@ -29,12 +30,13 @@
 LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 dht DHT;
 MeasuringContext* measuringContext = new MeasuringContext();
+HatchContext* hatchContext = new HatchContext();
 
 MainMenu* _MainMenu = new MainMenu();
 InfoDisplay* _InfoDisplay = new InfoDisplay(&lcd, measuringContext, _MainMenu);
 HistoryRoller* _HistoryMenu = new HistoryRoller(&lcd, _MainMenu);
 SettingsMenu* _SettingsMenu = new SettingsMenu(&lcd, _MainMenu);
-TestMenu* _TestMenu = new TestMenu(&lcd, _MainMenu, MOTOR_ENABLE_PIN, MOTOR_UP_PIN, MOTOR_DOWN_PIN);
+TestMenu* _TestMenu = new TestMenu(&lcd, _MainMenu, hatchContext, MOTOR_ENABLE_PIN, MOTOR_UP_PIN, MOTOR_DOWN_PIN);
 
 DisplayHandler* currentHandler = _InfoDisplay;
 
@@ -51,7 +53,7 @@ bool buttonStateChanging = false;
 
 bool backlightOn = true;
 
-unsigned long hatchChangedMillis = 0;
+
 
 
 void updateButtonsWithDebounce()
@@ -138,7 +140,7 @@ void hatchMoveCommon(int pin, int newPosition, int time) {
 	digitalWrite(MOTOR_ENABLE_PIN, LOW);
 	digitalWrite(pin, LOW);
 	putHatchPosition(newPosition);
-	hatchChangedMillis = millis();
+	hatchContext->HatchChangedMillis = millis();
 	currentHandler->activate();
 	currentHour.updateHatch(newPosition);
 	currentHour.addMove();
@@ -154,17 +156,21 @@ void updateHatch() {
 		return;
 	}
 	
-	if (currentMillis > hatchChangedMillis + 3 * 60 * 1000) {
-		if (currentTemp > 27 && hatchPosition < 5) {
+	if (currentMillis > hatchContext->HatchChangedMillis + (settings.pauseSeconds * 1000)) {
+		_InfoDisplay->setPauseSecs(0);
+		if (currentTemp > settings.tempHighLimit && hatchPosition < 5) {
 			lcd.clear();
 			lcd.print("Raising to " + String(hatchPosition + 1) + "/5");
 			hatchMoveCommon(MOTOR_UP_PIN, hatchPosition + 1, settings.stepTimeUp);
 		}
-		else if (currentTemp < 24 && hatchPosition > 0) {
+		else if (currentTemp < settings.tempLowLimit && hatchPosition > 0) {
 			lcd.clear();
 			lcd.print("Lowering to " + String(hatchPosition - 1) + "/5");
 			hatchMoveCommon(MOTOR_DOWN_PIN, hatchPosition - 1, settings.stepTimeDown);
 		}
+	}
+	else {
+		_InfoDisplay->setPauseSecs((hatchContext->HatchChangedMillis + (settings.pauseSeconds * 1000) - currentMillis) / 1000);
 	}
 }
 
@@ -176,6 +182,7 @@ void setup()
 
 	pinMode(BUTTON1_PIN, INPUT);
 	pinMode(BUTTON2_PIN, INPUT);
+	pinMode(BUTTON3_PIN, INPUT);
 	
 	pinMode(DHT11_PIN, INPUT);
 
@@ -266,7 +273,7 @@ void loop()
 	}
 
 	updateButtonsWithDebounce();
-
+	updateBacklight();
 	updateHatch();
 
 	updateHourInfo();

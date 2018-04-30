@@ -11,6 +11,7 @@ private:
 	DisplayHandler* _MainMenu = 0;
 	unsigned long lcdUpdatedMillis;
 	HourInfo summary;
+	int pauseSecs = 0;
 
 public:
 	InfoDisplay(LiquidCrystal_I2C* lcd, MeasuringContext* measuringContext, DisplayHandler* mainMenu) {
@@ -31,7 +32,7 @@ public:
 
 	virtual void updateLcd() {
 		unsigned long currentMillis = millis();
-		if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 2000)
+		if (lcdUpdatedMillis == 0 || currentMillis > lcdUpdatedMillis + 1000)
 		{
 			_lcd->setCursor(0, 0);
 			_lcd->print("tmp " + padIntNumber(_measuringContext->getCurrentTemperature()));
@@ -49,11 +50,23 @@ public:
 			_lcd->setCursor(0, 3);
 			_lcd->print("12h moves " + padIntNumber(summary.hatchMoves));
 
+			_lcd->setCursor(14, 3);
+			if (pauseSecs > 0) {
+				_lcd->print("P " + String(pauseSecs) + "s");
+			}
+			else {
+				_lcd->print("      ");
+			}
+
 			lcdUpdatedMillis = currentMillis;
 		}
 	};
 
 	virtual void updateSummary(HourInfo newSummary) {
 		summary = newSummary;
+	}
+
+	virtual void setPauseSecs(int secs) {
+		pauseSecs = secs;
 	}
 };
