@@ -39,16 +39,15 @@ public:
 			int hourIndex = getHourIndex() - 1 - (infoIndex - hourCount);
 			if (hourIndex < 0)
 			{
-				hourIndex += 24;
+				hourIndex += hourCount;
 			}
 
-			int hours = (infoIndex - (hourCount - 1));
-			if (hours < 10)
+			if (infoIndex < 10)
 			{
 				_lcd->print(" ");
 			}
 
-			_lcd->print(String(hours) + "h ago");
+			_lcd->print(String(infoIndex) + "h ago");
 
 			HourInfo hourInfo = getHourInfo(hourIndex);
 			_lcd->setCursor(0, 1);
@@ -60,6 +59,11 @@ public:
 			_lcd->setCursor(0, 3);
 			_lcd->print("Moves " + padIntNumber(hourInfo.hatchMoves));
 
+			infoIndex += 1;
+			if (infoIndex > (hourCount - 1))
+			{
+				infoIndex = 0;
+			}
 			lcdUpdatedMillis = currentMillis;
 		}
 	};
