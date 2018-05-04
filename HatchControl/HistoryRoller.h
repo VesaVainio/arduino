@@ -36,7 +36,7 @@ public:
 		{
 			_lcd->clear();
 			_lcd->setCursor(0, 0);
-			int hourIndex = getHourIndex() - 1 - (infoIndex - hourCount);
+			int hourIndex = getHourIndex() - 1 - infoIndex;
 			if (hourIndex < 0)
 			{
 				hourIndex += hourCount;
