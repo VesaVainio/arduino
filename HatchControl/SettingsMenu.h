@@ -96,7 +96,7 @@ public:
 			}
 			else {
 				settings.enabled = true;
-				settings.backlightMode = Auto;
+				settings.backlightMode = On;
 				settings.tempLowLimit = 24;
 				settings.tempHighLimit = 28;
 				settings.stepTimeUp = 2000;
