@@ -11,8 +11,8 @@ byte getHatchPosition();
 void putHourIndex(byte index);
 byte getHourIndex();
 
-void putHourInfo(byte index, HourInfo info);
-HourInfo getHourInfo(byte index);
+void putHourInfo(int index, HourInfo info);
+HourInfo getHourInfo(int index);
 
 void putSettings(Settings settings);
 Settings getSettings();

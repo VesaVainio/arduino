@@ -53,6 +53,12 @@ public:
 			_lcd->setCursor(14, 3);
 			if (pauseSecs > 0) {
 				_lcd->print("P " + String(pauseSecs) + "s");
+				if (pauseSecs < 10) {
+					_lcd->print("  ");
+				}
+				else if (pauseSecs < 100) {
+					_lcd->print(" ");
+				}
 			}
 			else {
 				_lcd->print("      ");

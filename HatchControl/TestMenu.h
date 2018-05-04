@@ -33,7 +33,7 @@ private:
 
 	void startTestCommon() {
 		motorTestStart = millis();
-		_hatchContext->HatchChangedMillis = motorTestStart;
+		_hatchContext->updateHatchChanged();
 		motorTestRunning = true;
 		digitalWrite(_enable, HIGH);
 		_lcd->clear();

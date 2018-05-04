@@ -40,7 +40,9 @@ TestMenu* _TestMenu = new TestMenu(&lcd, _MainMenu, hatchContext, MOTOR_ENABLE_P
 
 DisplayHandler* currentHandler = _InfoDisplay;
 
-unsigned long nextHourFull = 60 * 60 * 1000;
+const long msInHour = 1000L * 60L * 60L;
+
+unsigned long nextHourFull = msInHour;
 HourInfo currentHour;
 HourInfo summary12h;
 
@@ -52,8 +54,6 @@ int button3State = LOW;
 bool buttonStateChanging = false;
 
 bool backlightOn = true;
-
-
 
 
 void updateButtonsWithDebounce()
@@ -140,7 +140,7 @@ void hatchMoveCommon(int pin, int newPosition, int time) {
 	digitalWrite(MOTOR_ENABLE_PIN, LOW);
 	digitalWrite(pin, LOW);
 	putHatchPosition(newPosition);
-	hatchContext->HatchChangedMillis = millis();
+	hatchContext->updateHatchChanged();
 	currentHandler->activate();
 	currentHour.updateHatch(newPosition);
 	currentHour.addMove();
@@ -153,10 +153,13 @@ void updateHatch() {
 	Settings settings = getSettings();
 	
 	if (!settings.enabled) {
+		_InfoDisplay->setPauseSecs(0);
 		return;
 	}
 	
-	if (currentMillis > hatchContext->HatchChangedMillis + (settings.pauseSeconds * 1000)) {
+	unsigned long pauseEnds = hatchContext->getHatchChanged() + (settings.pauseSeconds * 1000L);
+
+	if (currentMillis > pauseEnds) {
 		_InfoDisplay->setPauseSecs(0);
 		if (currentTemp > settings.tempHighLimit && hatchPosition < 5) {
 			lcd.clear();
@@ -170,7 +173,7 @@ void updateHatch() {
 		}
 	}
 	else {
-		_InfoDisplay->setPauseSecs((hatchContext->HatchChangedMillis + (settings.pauseSeconds * 1000) - currentMillis) / 1000);
+		_InfoDisplay->setPauseSecs((pauseEnds - currentMillis) / 1000L);
 	}
 }
 
@@ -260,7 +263,7 @@ void updateHourInfo() {
 
 		currentHour = HourInfo(measuringContext->getCurrentTemperature(), getHatchPosition());
 
-		nextHourFull += 60 * 60 * 1000;
+		nextHourFull += msInHour;
 		updateSummary(index);
 	}
 }

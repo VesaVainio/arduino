@@ -25,22 +25,22 @@ byte getHourIndex() {
 	return index;
 }
 
-void putHourInfo(byte index, HourInfo info) {
+void putHourInfo(int index, HourInfo info) {
 	EEPROM.put(hourInfoStart + index * hourInfoBytes, info);
 }
 
-HourInfo getHourInfo(byte index) {
+HourInfo getHourInfo(int index) {
 	HourInfo info;
 	EEPROM.get(hourInfoStart + index * hourInfoBytes, info);
 	return info;
 }
 
 void putSettings(Settings settings) {
-	EEPROM.put(100, settings);
+	EEPROM.put(300, settings);
 }
 
 Settings getSettings() {
 	Settings settings;
-	EEPROM.get(100, settings);
+	EEPROM.get(300, settings);
 	return settings;
 }
